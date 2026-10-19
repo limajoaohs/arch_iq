@@ -1,0 +1,59 @@
+[
+  {
+    "id": "SEC-01",
+    "pillar": "Security",
+    "service": "S3",
+    "rule": "S3 Buckets should not be publicly accessible.",
+    "recommendation": "Enable S3 Block Public Access at the account and bucket levels. Use bucket policies with aws:PrincipalArn conditions and KMS encryption at rest."
+  },
+  {
+    "id": "SEC-02",
+    "pillar": "Security",
+    "service": "Security Groups",
+    "rule": "Do not allow unrestricted ingress (0.0.0.0/0) on administrative ports.",
+    "recommendation": "Restrict SSH (port 22) and RDP (port 3389) ingress to specific bastion CIDR blocks, or use AWS Systems Manager Session Manager instead of public ingress."
+  },
+  {
+    "id": "SEC-03",
+    "pillar": "Security",
+    "service": "IAM",
+    "rule": "Avoid using root credentials or wildcard IAM policies.",
+    "recommendation": "Enforce least-privilege IAM roles with permission boundaries. Use temporary credentials through IAM Identity Center or STS."
+  },
+  {
+    "id": "COST-01",
+    "pillar": "Cost Optimization",
+    "service": "EC2",
+    "rule": "Prefer ARM-based Graviton instances for standard workloads.",
+    "recommendation": "Migrate general-purpose and memory-intensive instances to Graviton (e.g. m7g, c7g, r7g) to achieve up to 40% better price-performance compared to x86 equivalents."
+  },
+  {
+    "id": "COST-02",
+    "pillar": "Cost Optimization",
+    "service": "VPC",
+    "rule": "Eliminate redundant NAT Gateway data transfer fees.",
+    "recommendation": "Use VPC Endpoints (AWS PrivateLink) for S3, DynamoDB, and internal AWS services instead of routing traffic out through expensive NAT Gateways."
+  },
+  {
+    "id": "COST-03",
+    "pillar": "Cost Optimization",
+    "service": "DynamoDB",
+    "rule": "Choose appropriate capacity mode based on traffic predictability.",
+    "recommendation": "Use On-Demand capacity for unpredictable or intermittent workloads. Switch to Provisioned capacity with Auto Scaling for predictable baseline workloads with Savings Plans / Reserved Capacity."
+  },
+  {
+    "id": "REL-01",
+    "pillar": "Reliability",
+    "service": "RDS",
+    "rule": "Production databases should have Multi-AZ deployment enabled.",
+    "recommendation": "Enable Multi-AZ replication to allow automated failover without manual intervention. Implement automated snapshots and point-in-time recovery."
+  },
+  {
+    "id": "REL-02",
+    "pillar": "Reliability",
+    "service": "ALB / ASG",
+    "rule": "Workloads must span across at least two Availability Zones.",
+    "recommendation": "Configure Auto Scaling Groups with subnets spanning multiple AZs behind an Application Load Balancer with health checks."
+  }
+]
+
