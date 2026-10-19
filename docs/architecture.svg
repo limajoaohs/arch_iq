@@ -1,0 +1,203 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 680" width="1200" height="680" style="background:#080808; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <defs>
+    <!-- Background Gradients -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0a0a"/>
+      <stop offset="100%" stop-color="#121212"/>
+    </linearGradient>
+
+    <!-- Card Background Gradient: Rich Black to Obsidian -->
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#181818"/>
+      <stop offset="100%" stop-color="#0f0f0f"/>
+    </linearGradient>
+
+    <!-- Inner Item Gradient -->
+    <linearGradient id="itemGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#202020"/>
+      <stop offset="100%" stop-color="#141414"/>
+    </linearGradient>
+
+    <!-- Subtle Tertiary Blue Gradients -->
+    <linearGradient id="blueAccent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#60a5fa"/>
+    </linearGradient>
+
+    <!-- Subtle Dot Grid Background -->
+    <pattern id="gridPattern" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1" fill="#ffffff" fill-opacity="0.04"/>
+    </pattern>
+
+    <!-- Arrow Markers in Tertiary Blue -->
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#3b82f6"/>
+    </marker>
+    <marker id="arrowWhite" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#ffffff"/>
+    </marker>
+  </defs>
+
+  <!-- Background Base & Grid -->
+  <rect width="1200" height="680" fill="#080808"/>
+  <rect width="1200" height="680" fill="url(#gridPattern)"/>
+
+  <!-- Top Navigation / Title Banner -->
+  <rect x="0" y="0" width="1200" height="70" fill="#0f0f0f" stroke="#262626" stroke-width="1"/>
+  <circle cx="24" cy="35" r="5" fill="#3b82f6"/>
+  <text x="40" y="43" fill="#ffffff" font-size="22" font-weight="700" letter-spacing="0.5">ArchIQ</text>
+  <text x="125" y="43" fill="#888888" font-size="15" font-weight="400">| Cloud Architecture &amp; FinOps Copilot (AWS Well-Architected)</text>
+
+  <!-- Top Right Badge -->
+  <rect x="990" y="21" width="170" height="28" rx="6" fill="#141414" stroke="#3b82f6" stroke-width="1.2"/>
+  <circle cx="1006" cy="35" r="3.5" fill="#3b82f6"/>
+  <text x="1084" y="40" fill="#ffffff" font-size="12" font-weight="600" text-anchor="middle">AWS + LangGraph</text>
+
+  <!-- ==================== SECTION 1: INGESTION & CLIENT ==================== -->
+  <g transform="translate(40, 100)">
+    <rect width="220" height="540" rx="12" fill="url(#cardGrad)" stroke="#2b2b2b" stroke-width="1.5"/>
+    <text x="20" y="34" fill="#ffffff" font-size="14" font-weight="700" letter-spacing="0.5">1. INPUT &amp; CLIENT LAYER</text>
+    <line x1="20" y1="46" x2="200" y2="46" stroke="#262626" stroke-width="1"/>
+
+    <!-- Developer Item -->
+    <rect x="20" y="65" width="180" height="88" rx="8" fill="url(#itemGrad)" stroke="#333333" stroke-width="1"/>
+    <text x="34" y="92" fill="#ffffff" font-size="14" font-weight="600">Developer / Architect</text>
+    <text x="34" y="114" fill="#cccccc" font-size="12">Interactive Chat CLI</text>
+    <text x="34" y="132" fill="#777777" font-size="11">Natural language queries</text>
+
+    <!-- IaC Artifact Item -->
+    <rect x="20" y="170" width="180" height="98" rx="8" fill="url(#itemGrad)" stroke="#333333" stroke-width="1"/>
+    <text x="34" y="197" fill="#ffffff" font-size="14" font-weight="600">IaC Specifications</text>
+    <text x="34" y="219" fill="#cccccc" font-size="12">Terraform (.tf)</text>
+    <text x="34" y="237" fill="#cccccc" font-size="12">CloudFormation (.yaml)</text>
+    <text x="34" y="254" fill="#777777" font-size="11">Architecture blueprints</text>
+
+    <!-- Amazon Q Developer Item (Blue Accent Border) -->
+    <rect x="20" y="285" width="180" height="102" rx="8" fill="url(#itemGrad)" stroke="#3b82f6" stroke-width="1.2"/>
+    <text x="34" y="312" fill="#ffffff" font-size="14" font-weight="600">Amazon Q Developer</text>
+    <text x="34" y="334" fill="#60a5fa" font-size="12">IDE &amp; CI/CD Copilot</text>
+    <text x="34" y="352" fill="#777777" font-size="11">Code generation assist</text>
+    <text x="34" y="369" fill="#777777" font-size="11">Security scan integration</text>
+
+    <!-- FastAPI Gateway Item -->
+    <rect x="20" y="405" width="180" height="105" rx="8" fill="url(#itemGrad)" stroke="#333333" stroke-width="1"/>
+    <text x="34" y="433" fill="#ffffff" font-size="14" font-weight="600">FastAPI Gateway</text>
+    <text x="34" y="455" fill="#cccccc" font-size="12">REST Endpoints</text>
+    <text x="34" y="473" fill="#3b82f6" font-size="11" font-family="monospace">POST /api/audit</text>
+    <text x="34" y="492" fill="#777777" font-size="11">AWS Lambda Compatible</text>
+  </g>
+
+  <!-- Arrow from Ingestion to Core -->
+  <path d="M 260 360 L 320 360" stroke="#3b82f6" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- ==================== SECTION 2: LANGGRAPH CORE ==================== -->
+  <g transform="translate(320, 100)">
+    <!-- Core Frame with Crisp Border & Tertiary Blue Highlight -->
+    <rect width="520" height="540" rx="12" fill="url(#cardGrad)" stroke="#3b82f6" stroke-width="1.5"/>
+    <text x="25" y="34" fill="#ffffff" font-size="14" font-weight="700" letter-spacing="0.5">2. LANGGRAPH STATEFUL AGENT CORE</text>
+    <text x="370" y="34" fill="#60a5fa" font-size="12" font-weight="500">StateGraph Workflow</text>
+    <line x1="25" y1="46" x2="495" y2="46" stroke="#262626" stroke-width="1"/>
+
+    <!-- State Definition Box -->
+    <rect x="25" y="62" width="470" height="42" rx="6" fill="#0d0d0d" stroke="#2e2e2e" stroke-width="1"/>
+    <text x="40" y="87" fill="#ffffff" font-size="11.5" font-family="monospace">GraphState: { code, parsed_resources, rag_context, sec_audit, finops, report }</text>
+
+    <!-- Node 1: Parser & Triage -->
+    <g transform="translate(25, 120)">
+      <rect width="470" height="66" rx="8" fill="url(#itemGrad)" stroke="#333333" stroke-width="1"/>
+      <rect x="14" y="18" width="28" height="28" rx="6" fill="#141414" stroke="#3b82f6" stroke-width="1.2"/>
+      <text x="28" y="37" fill="#60a5fa" font-size="13" font-weight="700" text-anchor="middle">1</text>
+      <text x="54" y="31" fill="#ffffff" font-size="13" font-weight="600">Parser &amp; Triage Node</text>
+      <text x="54" y="51" fill="#888888" font-size="11">Extracts declared AWS services, CIDRs, IAM bindings, and architecture specs</text>
+    </g>
+
+    <!-- Edge 1-2 -->
+    <path d="M 260 186 L 260 206" stroke="#3b82f6" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+
+    <!-- Node 2: RAG Retriever -->
+    <g transform="translate(25, 206)">
+      <rect width="470" height="66" rx="8" fill="url(#itemGrad)" stroke="#333333" stroke-width="1"/>
+      <rect x="14" y="18" width="28" height="28" rx="6" fill="#141414" stroke="#3b82f6" stroke-width="1.2"/>
+      <text x="28" y="37" fill="#60a5fa" font-size="13" font-weight="700" text-anchor="middle">2</text>
+      <text x="54" y="31" fill="#ffffff" font-size="13" font-weight="600">RAG Context Retrieval Node</text>
+      <text x="54" y="51" fill="#888888" font-size="11">Queries ChromaDB for official AWS Well-Architected rules &amp; service guidelines</text>
+    </g>
+
+    <!-- Edge 2-3 -->
+    <path d="M 260 272 L 260 292" stroke="#3b82f6" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+
+    <!-- Node 3: Security & Reliability -->
+    <g transform="translate(25, 292)">
+      <rect width="470" height="66" rx="8" fill="url(#itemGrad)" stroke="#333333" stroke-width="1"/>
+      <rect x="14" y="18" width="28" height="28" rx="6" fill="#141414" stroke="#3b82f6" stroke-width="1.2"/>
+      <text x="28" y="37" fill="#60a5fa" font-size="13" font-weight="700" text-anchor="middle">3</text>
+      <text x="54" y="31" fill="#ffffff" font-size="13" font-weight="600">Security &amp; Reliability Auditor (Bedrock)</text>
+      <text x="54" y="51" fill="#888888" font-size="11">Detects 0.0.0.0/0 ingress, unencrypted storage, single-AZ points of failure</text>
+    </g>
+
+    <!-- Edge 3-4 -->
+    <path d="M 260 358 L 260 378" stroke="#3b82f6" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+
+    <!-- Node 4: FinOps Optimizer -->
+    <g transform="translate(25, 378)">
+      <rect width="470" height="66" rx="8" fill="url(#itemGrad)" stroke="#333333" stroke-width="1"/>
+      <rect x="14" y="18" width="28" height="28" rx="6" fill="#141414" stroke="#3b82f6" stroke-width="1.2"/>
+      <text x="28" y="37" fill="#60a5fa" font-size="13" font-weight="700" text-anchor="middle">4</text>
+      <text x="54" y="31" fill="#ffffff" font-size="13" font-weight="600">FinOps &amp; Cost Optimizer Node (Bedrock)</text>
+      <text x="54" y="51" fill="#888888" font-size="11">Identifies Graviton switches, VPC Endpoints vs NAT, On-Demand vs Auto Scaling</text>
+    </g>
+
+    <!-- Edge 4-5 -->
+    <path d="M 260 444 L 260 464" stroke="#3b82f6" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+
+    <!-- Node 5: Synthesis & Report -->
+    <g transform="translate(25, 464)">
+      <rect width="470" height="64" rx="8" fill="url(#itemGrad)" stroke="#333333" stroke-width="1"/>
+      <rect x="14" y="18" width="28" height="28" rx="6" fill="#141414" stroke="#3b82f6" stroke-width="1.2"/>
+      <text x="28" y="37" fill="#60a5fa" font-size="13" font-weight="700" text-anchor="middle">5</text>
+      <text x="54" y="30" fill="#ffffff" font-size="13" font-weight="600">Synthesis &amp; IaC Remediation Generator</text>
+      <text x="54" y="49" fill="#888888" font-size="11">Compiles compliance score, executive summary, and optimized IaC code</text>
+    </g>
+  </g>
+
+  <!-- Connectors between LangGraph and Cloud Backend -->
+  <path d="M 840 239 L 900 239" stroke="#3b82f6" stroke-width="2" stroke-dasharray="4 4" fill="none" marker-end="url(#arrow)"/>
+  <path d="M 840 325 L 900 325" stroke="#3b82f6" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+  <path d="M 840 411 L 900 411" stroke="#3b82f6" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+  <path d="M 840 496 L 900 496" stroke="#3b82f6" stroke-width="2" stroke-dasharray="4 4" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- ==================== SECTION 3: AWS CLOUD & AI ==================== -->
+  <g transform="translate(900, 100)">
+    <rect width="260" height="540" rx="12" fill="url(#cardGrad)" stroke="#2b2b2b" stroke-width="1.5"/>
+    <text x="20" y="34" fill="#ffffff" font-size="14" font-weight="700" letter-spacing="0.5">3. AWS &amp; AI PLATFORM</text>
+    <line x1="20" y1="46" x2="240" y2="46" stroke="#262626" stroke-width="1"/>
+
+    <!-- ChromaDB Card -->
+    <rect x="20" y="65" width="220" height="88" rx="8" fill="url(#itemGrad)" stroke="#333333" stroke-width="1"/>
+    <text x="34" y="93" fill="#ffffff" font-size="14" font-weight="600">ChromaDB Vector Store</text>
+    <text x="34" y="115" fill="#cccccc" font-size="12">Embeddings &amp; Indexing</text>
+    <text x="34" y="133" fill="#777777" font-size="11">AWS Well-Architected docs</text>
+
+    <!-- Amazon Bedrock Card (Blue Accent Highlight) -->
+    <rect x="20" y="165" width="220" height="122" rx="8" fill="url(#itemGrad)" stroke="#3b82f6" stroke-width="1.5"/>
+    <text x="34" y="193" fill="#ffffff" font-size="14" font-weight="600">Amazon Bedrock</text>
+    <text x="34" y="215" fill="#60a5fa" font-size="12">Claude 3.5 Sonnet / Haiku</text>
+    <text x="34" y="235" fill="#cccccc" font-size="11">Bedrock Guardrails</text>
+    <text x="34" y="253" fill="#777777" font-size="11">Hallucination prevention</text>
+    <text x="34" y="269" fill="#777777" font-size="11">PII masking &amp; safety policies</text>
+
+    <!-- Amazon S3 Card -->
+    <rect x="20" y="300" width="220" height="98" rx="8" fill="url(#itemGrad)" stroke="#333333" stroke-width="1"/>
+    <text x="34" y="328" fill="#ffffff" font-size="14" font-weight="600">Amazon S3</text>
+    <text x="34" y="350" fill="#cccccc" font-size="12">Reports &amp; Blueprints</text>
+    <text x="34" y="368" fill="#777777" font-size="11">Markdown &amp; JSON exports</text>
+    <text x="34" y="384" fill="#777777" font-size="11">Audit history persistence</text>
+
+    <!-- Amazon DynamoDB Card -->
+    <rect x="20" y="410" width="220" height="102" rx="8" fill="url(#itemGrad)" stroke="#333333" stroke-width="1"/>
+    <text x="34" y="438" fill="#ffffff" font-size="14" font-weight="600">Amazon DynamoDB</text>
+    <text x="34" y="460" fill="#cccccc" font-size="12">State &amp; Checkpoints</text>
+    <text x="34" y="478" fill="#777777" font-size="11">LangGraph Memory saver</text>
+    <text x="34" y="495" fill="#777777" font-size="11">Multi-turn session tracking</text>
+  </g>
+</svg>
