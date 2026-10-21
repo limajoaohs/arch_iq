@@ -53,16 +53,20 @@ class AgentNodes:
         return {"retrieved_knowledge": guidelines}
 
     def audit_security(self, state: ArchIQState) -> Dict[str, Any]:
-        prompt = f"""Evaluate this cloud architecture or Terraform definition for Security and Reliability risks.
-Architecture:
-{state.get('raw_input')}
+        raw_input = state.get("raw_input", "")
+        parsed_services = state.get("parsed_services", [])
+        has_sg = "SECURITY_GROUP" in parsed_services
 
-Relevant AWS Well-Architected Rules:
-{state.get('retrieved_knowledge')}
+        retrieved_knowledge = state.get("retrieved_knowledge", "")
 
-Return a strict JSON object with:
-"score": integer (0 to 100),
-"findings": array of {{"severity": "HIGH"|"MEDIUM"|"LOW", "service": string, "rule": string, "remediation": string}}"""
+        if not has_sg:
+            services_summary = ", ".join([s for s in parsed_services if s != "SECURITY_GROUP"]) or "none"
+            knowledge_for_prompt = retrieved_knowledge if retrieved_knowledge else "No specific Well-Architected rules retrieved."
+        else:
+            knowledge_for_prompt = retrieved_knowledge
+            services_summary = ", ".join(parsed_services)
+
+        prompt = "Evaluate this cloud architecture or Terraform definition for Security and Reliability risks.\nArchitecture:\n" + raw_input + "\nRelevant AWS Well-Architected Rules:\n" + knowledge_for_prompt + "\nBased on the above architecture (services: " + services_summary + "), provide a security evaluation.\n\nReturn strict JSON with:\"score\": integer (0-100),\n\"findings\": array of {\"severity\": \"HIGH\"|\"MEDIUM\"|\"LOW\", \"service\": string, \"rule\": string, \"remediation\": string}.\n\nReturn ONLY the JSON, no surrounding text."
 
         system_prompt = "You are a Principal Cloud Security Architect. Output only valid JSON."
         raw_res = self.bedrock.invoke(prompt=prompt, system_prompt=system_prompt)
@@ -73,19 +77,30 @@ Return a strict JSON object with:
         except Exception:
             parsed = {"score": 75, "findings": []}
 
+        if not has_sg:
+            filtered_findings = []
+            for finding in parsed.get("findings", []):
+                finding_service = finding.get("service", "").upper()
+                finding_rule = finding.get("rule", "").lower()
+
+                is_sg_related = (
+                    "securitygroup" in finding_rule or
+                    "unrestricted ingress" in finding_rule or
+                    "port 22" in finding_rule.lower() or
+                    "cidr_blocks" in finding_rule or
+                    finding_service == "SECURITY_GROUP" or
+                    "ssh" in finding_rule.lower()
+                )
+
+                if not is_sg_related:
+                    filtered_findings.append(finding)
+
+            parsed["findings"] = filtered_findings
+
         return {"security_audit": parsed}
 
     def optimize_finops(self, state: ArchIQState) -> Dict[str, Any]:
-        prompt = f"""Review this architecture for FinOps and AWS Cost Optimization opportunities.
-Architecture:
-{state.get('raw_input')}
-
-Relevant Rules:
-{state.get('retrieved_knowledge')}
-
-Return a strict JSON object with:
-"monthly_savings_pct": integer,
-"optimizations": array of {{"service": string, "action": string, "impact": string}}"""
+        prompt = "Review this architecture for FinOps and AWS Cost Optimization opportunities.\nArchitecture:\n" + state.get("raw_input") + "\nRelevant Rules:\n" + state.get("retrieved_knowledge") + "\n\nReturn a strict JSON object with:\"monthly_savings_pct\": integer,\"optimizations\": array of {\"service\": string, \"action\": string, \"impact\": string}"
 
         system_prompt = "You are an AWS FinOps Specialist. Output only valid JSON."
         raw_res = self.bedrock.invoke(prompt=prompt, system_prompt=system_prompt)
@@ -105,24 +120,21 @@ Return a strict JSON object with:
 
         findings_lines = []
         for f in sec.get("findings", []):
-            findings_lines.append(f"- [{f.get('severity')}] {f.get('service')}: {f.get('rule')} -> {f.get('remediation')}")
+            findings_lines.append("- [" + f.get("severity") + "] " + f.get("service") + ": " + f.get("rule") + " -> " + f.get("remediation"))
 
         opt_lines = []
         for o in fin.get("optimizations", []):
-            opt_lines.append(f"- {o.get('service')}: {o.get('action')} ({o.get('impact')})")
+            opt_lines.append("- " + o.get("service") + ": " + o.get("action") + " (" + o.get("impact") + ")")
 
-        report_md = f"""# ArchIQ Compliance and Architecture Report
+        findings_str = "\n".join(findings_lines) if findings_lines else "No critical security risks identified."
+        opt_str = "\n".join(opt_lines) if opt_lines else "Workload already adheres to baseline cost allocation."
 
-## Overall Health Score: {score}/100
-- **Potential Monthly Savings:** {fin.get('monthly_savings_pct', 0)}%
-- **Identified AWS Services:** {', '.join(state.get('parsed_services', []))}
-
-## Security & Well-Architected Findings
-{chr(10).join(findings_lines) if findings_lines else "No critical security risks identified."}
-
-## FinOps & Cost Recommendations
-{chr(10).join(opt_lines) if opt_lines else "Workload already adheres to baseline cost allocation."}
-"""
+        report_md = "# ArchIQ Compliance and Architecture Report\n\n" + \
+            "## Overall Health Score: " + str(score) + "/100\n" + \
+            "## Potential Monthly Savings: " + str(fin.get('monthly_savings_pct', 0)) + "%\n" + \
+            "## Identified AWS Services: " + ", ".join(state.get('parsed_services', [])) + "\n\n" + \
+            "## Security & Well-Architected Findings\n" + findings_str + "\n\n" + \
+            "## FinOps & Cost Recommendations\n" + opt_str
 
         remediated = self.amazon_q.generate_iac_remediation(
             original_iac=state.get("raw_input", ""),
@@ -137,4 +149,3 @@ Return a strict JSON object with:
             "remediated_iac": remediated,
             "report_location": s3_uri
         }
-
