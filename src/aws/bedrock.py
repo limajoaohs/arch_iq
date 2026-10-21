@@ -20,36 +20,32 @@ class BedrockService:
         return self._client
 
     def invoke(self, prompt: str, system_prompt: Optional[str] = None, max_tokens: int = 2048, temperature: float = 0.2) -> str:
-        body: Dict[str, Any] = {
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": max_tokens,
-            "temperature": temperature,
+        converse_kwargs: Dict[str, Any] = {
+            "modelId": self.model_id,
             "messages": [
                 {
                     "role": "user",
-                    "content": [{"type": "text", "text": prompt}]
+                    "content": [{"text": prompt}]
                 }
-            ]
+            ],
+            "inferenceConfig": {
+                "maxTokens": max_tokens,
+                "temperature": temperature
+            }
         }
 
         if system_prompt:
-            body["system"] = system_prompt
-
-        invoke_kwargs: Dict[str, Any] = {
-            "modelId": self.model_id,
-            "contentType": "application/json",
-            "accept": "application/json",
-            "body": json.dumps(body)
-        }
+            converse_kwargs["system"] = [{"text": system_prompt}]
 
         if self.guardrail_id:
-            invoke_kwargs["guardrailIdentifier"] = self.guardrail_id
-            invoke_kwargs["guardrailVersion"] = self.guardrail_version
+            converse_kwargs["guardrailConfig"] = {
+                "guardrailIdentifier": self.guardrail_id,
+                "guardrailVersion": self.guardrail_version
+            }
 
         try:
-            response = self.client.invoke_model(**invoke_kwargs)
-            response_body = json.loads(response["body"].read().decode("utf-8"))
-            return response_body["content"][0]["text"]
+            response = self.client.converse(**converse_kwargs)
+            return response["output"]["message"]["content"][0]["text"]
         except (BotoCoreError, ClientError) as e:
             return self._fallback_invoke(prompt, system_prompt)
 
