@@ -51,7 +51,7 @@ class StorageService:
                 TableName=self.table_name,
                 Item={
                     "SessionId": {"S": session_id},
-                    "Timestamp": {"N": str(uuid.uuid1().time)},
+                    "Timestamp": {"S": str(uuid.uuid1().time)},
                     "State": {"S": json.dumps(state_payload)}
                 }
             )
