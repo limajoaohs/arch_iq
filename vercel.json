@@ -1,3 +1,4 @@
 {
-  "buildCommand": "pip install -r requirements_minimal.txt"
+  "buildCommand": "pip install -r requirements_minimal.txt",
+  "framework": "python"
 }
