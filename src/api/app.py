@@ -15,8 +15,13 @@ from src.agents.graph import create_arch_iq_graph
 
 app = FastAPI(title="ArchIQ API", version="1.0.0")
 
-# Servir arquivos estáticos da pasta web
-app.mount("/web", StaticFiles(directory="web", html=True), name="web")
+# Rota raiz - servir o index.html da interface web
+@app.get("/", response_class=HTMLResponse)
+async def root():
+    return FileResponse("web/index.html")
+
+# Servir arquivos estáticos da pasta web (na raiz)
+app.mount("/", StaticFiles(directory="web", html=True), name="web")
 
 vector_store = VectorStore()
 bedrock_service = BedrockService()
