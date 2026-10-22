@@ -1,4 +1,21 @@
 {
+  "version": 2,
   "buildCommand": "pip install -r requirements_minimal.txt",
-  "framework": "python"
+  "framework": "python",
+  "builds": [
+    { "src": "src/api/app.py", "use": "@vercel/python" }
+  ],
+  "routes": [
+    { "src": "/api/audit", "methods": ["POST", "OPTIONS"], "dest": "src/api/app.py" },
+    { "src": "/health", "methods": ["GET"], "dest": "src/api/app.py" },
+    { "src": "/(.*)", "dest": "web/index.html" }
+  ],
+  "env": {
+    "AWS_ACCESS_KEY_ID": "@archiq-aws-access-key-id",
+    "AWS_SECRET_ACCESS_KEY": "@archiq-aws-secret-access-key",
+    "BEDROCK_MODEL_ID": "@archiq-bedrock-model-id",
+    "AWS_REGION": "@archiq-aws-region",
+    "S3_REPORTS_BUCKET": "@archiq-s3-reports-bucket",
+    "DYNAMODB_TABLE_NAME": "@archiq-dynamodb-table-name"
+  }
 }

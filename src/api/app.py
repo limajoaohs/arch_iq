@@ -15,27 +15,6 @@ from src.agents.graph import create_arch_iq_graph
 
 app = FastAPI(title="ArchIQ API", version="1.0.0")
 
-# Rota raiz - servir o index.html da interface web
-@app.get("/", response_class=HTMLResponse)
-async def root():
-    return FileResponse("web/index.html")
-
-# Servir arquivos estáticos da pasta web (na raiz)
-app.mount("/", StaticFiles(directory="web", html=True), name="web")
-
-vector_store = VectorStore()
-bedrock_service = BedrockService()
-storage_service = StorageService()
-
-data_path = os.path.join(os.path.dirname(__file__), "..", "..", "data", "well_architected.json")
-vector_store.seed_data(os.path.abspath(data_path))
-
-graph = create_arch_iq_graph(
-    vector_store=vector_store,
-    bedrock_service=bedrock_service,
-    storage_service=storage_service
-)
-
 
 class AuditRequest(BaseModel):
     code_or_prompt: str
@@ -170,5 +149,31 @@ def audit_architecture(request: AuditRequest):
             executive_summary=executive_summary
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        # Não expor stack traces nem detalhes internos ao cliente
+        raise HTTPException(status_code=500, detail="Erro interno do servidor ao processar a solicitação.")
+
+
+# Inicializar serviços e graph (depois das rotas da API para evitar captura pelo StaticFiles)
+vector_store = VectorStore()
+bedrock_service = BedrockService()
+storage_service = StorageService()
+
+data_path = os.path.join(os.path.dirname(__file__), "..", "..", "data", "well_architected.json")
+vector_store.seed_data(os.path.abspath(data_path))
+
+graph = create_arch_iq_graph(
+    vector_store=vector_store,
+    bedrock_service=bedrock_service,
+    storage_service=storage_service
+)
+
+
+# Rota raiz - servir o index.html da interface web
+@app.get("/", response_class=HTMLResponse)
+async def root():
+    return FileResponse("web/index.html")
+
+
+# Servir arquivos estáticos da pasta web (na raiz) - montado DEPOIS das rotas da API
+app.mount("/", StaticFiles(directory="web", html=True), name="web")
 

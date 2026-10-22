@@ -16,11 +16,20 @@
     </header>
 
     <!-- Área de Upload -->
-    <div class="upload-area" id="uploadArea">
-      <p>Arraste e solte seu arquivo Terraform (.tf) ou copie o código abaixo</p>
-      <input type="file" accept=".tf,.json" id="fileInput" style="display:none;">
-      <p class="file-name">Nenhum arquivo selecionado</p>
-      <button class="btn-analyze" id="analyzeBtn">Analisar Arquitetura</button>
+    <div class="upload-area" id="uploadArea" role="region" aria-label="Área de envio de arquivo Terraform">
+      <p class="upload-instruction">Arraste e solte seu arquivo Terraform (.tf) ou copie o código abaixo</p>
+      <input type="file" accept=".tf,.json,.tf.json" id="fileInput" style="display:none;" aria-hidden="true">
+      <p class="file-name" id="fileNameDisplay" aria-live="polite">Nenhum arquivo selecionado</p>
+      <button class="btn-analyze" id="analyzeBtn" disabled type="button">Analisar Arquitetura</button>
+      <!-- Mensagem de erro na página (substitui alerts) -->
+      <div id="errorMessage" class="error-message" role="alert" aria-live="assertive"></div>
+    </div>
+
+    <!-- Editor de código Terraform (alternativa ao upload) -->
+    <div class="code-editor-section">
+      <label for="codeEditor" class="editor-label">Ou cole seu código Terraform aqui:</label>
+      <textarea id="codeEditor" placeholder='Ex: resource "aws_instance" "web" { ... }' rows="6" aria-label="Código Terraform"></textarea>
+      <p class="editor-hint">Aceita arquivos .tf ou código colado diretamente.</p>
     </div>
 
     <!-- Loading Overlay -->
