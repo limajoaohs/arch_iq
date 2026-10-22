@@ -126,15 +126,32 @@ class AgentNodes:
         for o in fin.get("optimizations", []):
             opt_lines.append("- " + o.get("service") + ": " + o.get("action") + " (" + o.get("impact") + ")")
 
-        findings_str = "\n".join(findings_lines) if findings_lines else "No critical security risks identified."
-        opt_str = "\n".join(opt_lines) if opt_lines else "Workload already adheres to baseline cost allocation."
+        findings_str = "\n".join(findings_lines) if findings_lines else "Nenhum risco critical de segurança identificado."
+        opt_str = "\n".join(opt_lines) if opt_lines else "A carga de trabalho já atende aos criticos de alocacao de custos basais."
 
-        report_md = "# ArchIQ Compliance and Architecture Report\n\n" + \
-            "## Overall Health Score: " + str(score) + "/100\n" + \
-            "## Potential Monthly Savings: " + str(fin.get('monthly_savings_pct', 0)) + "%\n" + \
-            "## Identified AWS Services: " + ", ".join(state.get('parsed_services', [])) + "\n\n" + \
-            "## Security & Well-Architected Findings\n" + findings_str + "\n\n" + \
-            "## FinOps & Cost Recommendations\n" + opt_str
+        # Generate mermaid diagram for architecture visualization
+        services = state.get("parsed_services", [])
+        mermaid_diagram = self._generate_mermaid_diagram(services)
+
+        report_md = (
+            "# ArchIQ Relatorio de Conformidade e Arquitetura\n\n"
+            "### Score de Saude Geral\n"
+            f"> **{score} / 100**\n\n"
+            f"{mermaid_diagram}\n\n"
+            "---\n\n"
+            "## Poupança Mensal Potencial\n"
+            f"> {fin.get('monthly_savings_pct', 0)}%\n\n"
+            "---\n\n"
+            "## Servicos Identificados\n"
+            f"> {', '.join(services) if services else 'Nenhum'}\n\n"
+            "---\n\n"
+            "## Findings de Seguranca e Bem-Architected\n\n"
+            f"{findings_str}\n\n"
+            "---\n\n"
+            "## Recomendacoes de FinOps e Custos\n\n"
+            f"{opt_str}\n\n"
+            "---"
+        )
 
         remediated = self.amazon_q.generate_iac_remediation(
             original_iac=state.get("raw_input", ""),
@@ -149,3 +166,60 @@ class AgentNodes:
             "remediated_iac": remediated,
             "report_location": s3_uri
         }
+
+    def _generate_mermaid_diagram(self, services: List[str]) -> str:
+        """Generate a simple mermaid diagram visualizing the detected services."""
+        if not services or services == ["GENERAL_AWS"]:
+            return "*Nenhum serviço específico identificado - diagrama simplificado*"
+
+        # Define service group categories
+        compute_services = {"EC2", "LAMBDA", "ECS", "EKS", "ASG"}
+        storage_services = {"S3", "DYNAMODB"}
+        database_services = {"RDS"}
+        networking_services = {"VPC", "ALB", "CLOUDFRONT"}
+        messaging_services = {"SQS", "SNS"}
+        identity_services = {"IAM", "KMS"}
+
+        # Build diagram nodes
+        nodes = []
+        edges = []
+
+        for svc in services:
+            if svc in compute_services:
+                nodes.append(f"    {svc}[{svc}]")
+            elif svc in storage_services:
+                nodes.append(f"    {svc}[{svc}]")
+            elif svc in database_services:
+                nodes.append(f"    {svc}[{svc}]")
+            elif svc in networking_services:
+                nodes.append(f"    {svc}[{svc}]")
+            elif svc in messaging_services:
+                nodes.append(f"    {svc}[{svc}]")
+            elif svc in identity_services:
+                nodes.append(f"    {svc}[{svc}]")
+            else:
+                nodes.append(f"    {svc}[{svc}]")
+
+        # Add general connections based on common patterns
+        # Compute services often sit behind VPC
+        if any(s in compute_services for s in services) and "VPC" in services:
+            edges.append("    VPC -->|hosts| EC2")
+            edges.append("    VPC -->|hosts| ECS")
+            edges.append("    VPC -->|hosts| Lambda")
+
+        # S3 often used with CloudFront for delivery
+        if "S3" in services and "CLOUDFRONT" in services:
+            edges.append("    CLOUDFRONT -->|distributes| S3")
+
+        # IAM and KMS are foundational
+        if "IAM" in services:
+            edges.append("    IAM -->|manages| all other services")
+
+        # Build mermaid source
+        lines = ["graph TD"]
+        for node in nodes:
+            lines.append(node)
+        for edge in edges:
+            lines.append(edge)
+
+        return "\n".join(lines)
