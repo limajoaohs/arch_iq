@@ -387,9 +387,10 @@ function displayResults(result) {
 
     let badgeClass = 'atencao';
     let badgeText = getStatusText(score);
-    if (score >= 90) badgeClass = 'excelente';
-    else if (score >= 75) badgeClass = 'boa';
-    else if (score >= 50) badgeClass = 'regular';
+    if (score >= 85) badgeClass = 'alto';
+    else if (score >= 65) badgeClass = 'medio-alto';
+    else if (score >= 35) badgeClass = 'medio-baixo';
+    else badgeClass = 'baixo';
 
     const existingBadge = elements.scoreElement.parentElement?.querySelector('.badge');
     if (existingBadge) existingBadge.remove();
@@ -493,10 +494,10 @@ function displayResults(result) {
 
 /* Helper: texto do status */
 function getStatusText(score) {
-  if (score >= 90) return 'EXCELENTE';
-  if (score >= 75) return 'BOA';
-  if (score >= 50) return 'REGULAR';
-  return 'ATENÇÃO';
+  if (score >= 85) return 'ALTO';
+  if (score >= 65) return 'MEDIO-ALTO';
+  if (score >= 35) return 'MEDIO-BAIXO';
+  return 'BAIXO';
 }
 
 /* Escape HTML */

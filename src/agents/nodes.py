@@ -6,6 +6,7 @@ from src.aws.bedrock import BedrockService
 from src.aws.storage import StorageService
 from src.aws.amazon_q import AmazonQAssistant
 from src.rag.retriever import KnowledgeRetriever
+from src.terraform.static_analyzer import analyze_terraform
 
 
 class AgentNodes:
@@ -54,64 +55,34 @@ class AgentNodes:
 
     def audit_security(self, state: ArchIQState) -> Dict[str, Any]:
         raw_input = state.get("raw_input", "")
-        parsed_services = state.get("parsed_services", [])
-        has_sg = "SECURITY_GROUP" in parsed_services
 
-        retrieved_knowledge = state.get("retrieved_knowledge", "")
+        # Analise estatica primaria (nao depende de LLM / credenciais AWS)
+        static_result = analyze_terraform(raw_input)
 
-        if not has_sg:
-            services_summary = ", ".join([s for s in parsed_services if s != "SECURITY_GROUP"]) or "none"
-            knowledge_for_prompt = retrieved_knowledge if retrieved_knowledge else "No specific Well-Architected rules retrieved."
-        else:
-            knowledge_for_prompt = retrieved_knowledge
-            services_summary = ", ".join(parsed_services)
+        score = static_result["score"]
+        findings = static_result["findings"]
+        services = static_result["services"]
 
-        prompt = "Evaluate this cloud architecture or Terraform definition for Security and Reliability risks.\nArchitecture:\n" + raw_input + "\nRelevant AWS Well-Architected Rules:\n" + knowledge_for_prompt + "\nBased on the above architecture (services: " + services_summary + "), provide a security evaluation.\n\nReturn strict JSON with:\"score\": integer (0-100),\n\"findings\": array of {\"severity\": \"HIGH\"|\"MEDIUM\"|\"LOW\", \"service\": string, \"rule\": string, \"remediation\": string}.\n\nReturn ONLY the JSON, no surrounding text."
-
-        system_prompt = "You are a Principal Cloud Security Architect. Output only valid JSON."
-        raw_res = self.bedrock.invoke(prompt=prompt, system_prompt=system_prompt)
-
-        try:
-            cleaned = re.search(r"\{.*\}", raw_res, re.DOTALL)
-            parsed = json.loads(cleaned.group(0)) if cleaned else {"score": 75, "findings": []}
-        except Exception:
-            parsed = {"score": 75, "findings": []}
-
-        if not has_sg:
-            filtered_findings = []
-            for finding in parsed.get("findings", []):
-                finding_service = finding.get("service", "").upper()
-                finding_rule = finding.get("rule", "").lower()
-
-                is_sg_related = (
-                    "securitygroup" in finding_rule or
-                    "unrestricted ingress" in finding_rule or
-                    "port 22" in finding_rule.lower() or
-                    "cidr_blocks" in finding_rule or
-                    finding_service == "SECURITY_GROUP" or
-                    "ssh" in finding_rule.lower()
-                )
-
-                if not is_sg_related:
-                    filtered_findings.append(finding)
-
-            parsed["findings"] = filtered_findings
-
-        return {"security_audit": parsed}
+        # Manter somente a analise estatica (ja suficiente e deterministica)
+        return {
+            "security_audit": {
+                "score": score,
+                "findings": findings,
+            },
+            "parsed_services": services,
+        }
 
     def optimize_finops(self, state: ArchIQState) -> Dict[str, Any]:
-        prompt = "Review this architecture for FinOps and AWS Cost Optimization opportunities.\nArchitecture:\n" + state.get("raw_input") + "\nRelevant Rules:\n" + state.get("retrieved_knowledge") + "\n\nReturn a strict JSON object with:\"monthly_savings_pct\": integer,\"optimizations\": array of {\"service\": string, \"action\": string, \"impact\": string}"
+        raw_input = state.get("raw_input", "")
 
-        system_prompt = "You are an AWS FinOps Specialist. Output only valid JSON."
-        raw_res = self.bedrock.invoke(prompt=prompt, system_prompt=system_prompt)
+        # Analise estatica de FinOps (nao depende de LLM)
+        static_result = analyze_terraform(raw_input)
+        optimizations = static_result["optimizations"]
 
-        try:
-            cleaned = re.search(r"\{.*\}", raw_res, re.DOTALL)
-            parsed = json.loads(cleaned.group(0)) if cleaned else {"monthly_savings_pct": 20, "optimizations": []}
-        except Exception:
-            parsed = {"monthly_savings_pct": 20, "optimizations": []}
+        # Calcular percentual de economia baseado nas otimizacoes encontradas
+        savings_pct = min(60, len(optimizations) * 12)
 
-        return {"finops_audit": parsed}
+        return {"finops_audit": {"monthly_savings_pct": savings_pct, "optimizations": optimizations}}
 
     def synthesize_report(self, state: ArchIQState) -> Dict[str, Any]:
         sec = state.get("security_audit", {})
@@ -120,11 +91,15 @@ class AgentNodes:
 
         findings_lines = []
         for f in sec.get("findings", []):
-            findings_lines.append("- [" + f.get("severity") + "] " + f.get("service") + ": " + f.get("rule") + " -> " + f.get("remediation"))
+            findings_lines.append(
+                "- [" + str(f.get("severity") or "INFO") + "] " + str(f.get("service") or "N/A") + ": " + str(f.get("rule") or "N/A") + " -> " + str(f.get("remediation") or "N/A")
+            )
 
         opt_lines = []
         for o in fin.get("optimizations", []):
-            opt_lines.append("- " + o.get("service") + ": " + o.get("action") + " (" + o.get("impact") + ")")
+            opt_lines.append(
+                "- " + str(o.get("service") or "N/A") + ": " + str(o.get("action") or "N/A") + " (" + str(o.get("impact") or "N/A") + ")"
+            )
 
         findings_str = "\n".join(findings_lines) if findings_lines else "Nenhum risco critical de segurança identificado."
         opt_str = "\n".join(opt_lines) if opt_lines else "A carga de trabalho já atende aos criticos de alocacao de custos basais."

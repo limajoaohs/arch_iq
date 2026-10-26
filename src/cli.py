@@ -20,14 +20,14 @@ def print_summary_cards(result):
     services = result.get("parsed_services", [])
 
     # Determine score status level
-    if score >= 90:
-        score_status = "EXCELENTE"
-    elif score >= 75:
-        score_status = "BOA"
-    elif score >= 50:
-        score_status = "REGULAR"
+    if score >= 85:
+        score_status = "ALTO"
+    elif score >= 65:
+        score_status = "MEDIO-ALTO"
+    elif score >= 35:
+        score_status = "MEDIO-BAIXO"
     else:
-        score_status = "ATENCAO"
+        score_status = "BAIXO"
 
     # Determine savings level
     if savings >= 30:
