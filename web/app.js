@@ -286,7 +286,8 @@ async function handleAnalyze() {
 
   try {
     // Enviar para a API via POST com JSON (não definir Content-Type com boundary fixo)
-    const response = await fetch('/api/audit', {
+    const apiUrl = (window.API_CONFIG?.baseUrl || '') + (window.API_CONFIG?.auditEndpoint || '/api/audit');
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -2,6 +2,7 @@ import os
 import uuid
 from typing import Optional, Dict, Any, List
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -14,6 +15,16 @@ from src.agents.graph import create_arch_iq_graph
 
 
 app = FastAPI(title="ArchIQ API", version="1.0.0")
+
+# CORS - liberar frontend (ajuste via variavel de ambiente CORS_ORIGINS)
+cors_origins = os.environ.get("CORS_ORIGINS", "*").split(",")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[o.strip() for o in cors_origins],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 class AuditRequest(BaseModel):
