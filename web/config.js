@@ -10,8 +10,8 @@
 //                          'https://seu-app.railway.app'
 //                          'https://seu-app.fly.dev'
 window.API_CONFIG = {
-  // ⚠️ Altere esta linha para a URL real do seu backend FastAPI em producao
-  baseUrl: '',
+  // URL do backend hospedado no Render
+  baseUrl: 'https://arch-iq.onrender.com',
   auditEndpoint: '/api/audit',
   healthEndpoint: '/health'
 };
