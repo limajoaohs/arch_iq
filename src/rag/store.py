@@ -1,6 +1,8 @@
 import json
 import os
 from typing import List, Dict, Any, Optional
+import boto3
+from botocore.exceptions import BotoCoreError, ClientError
 from src.config import settings
 
 
@@ -11,6 +13,8 @@ class VectorStore:
         self._client = None
         self._collection = None
         self._memory_backup: List[Dict[str, Any]] = []
+        self._bedrock_agent_runtime = None
+        self._kb_id = settings.bedrock_kb_id
 
     def _init_chroma(self):
         try:
@@ -47,7 +51,43 @@ class VectorStore:
 
             self._collection.upsert(documents=documents, metadatas=metadatas, ids=ids)
 
+    def _get_bedrock_agent_runtime(self):
+        if self._bedrock_agent_runtime is None:
+            self._bedrock_agent_runtime = boto3.client(
+                "bedrock-agent-runtime", region_name=settings.aws_region
+            )
+        return self._bedrock_agent_runtime
+
+    def query_knowledge_base(self, query_text: str, top_k: int = 3) -> List[Dict[str, Any]]:
+        """Consulta uma Bedrock Knowledge Base, se configurada."""
+        if not self._kb_id:
+            return []
+        try:
+            client = self._get_bedrock_agent_runtime()
+            response = client.retrieve(
+                knowledgeBaseId=self._kb_id,
+                retrievalQuery={"text": query_text},
+                numberOfResults=top_k,
+            )
+            results = []
+            for item in response.get("retrievalResults", []):
+                content = item.get("content", {})
+                results.append({
+                    "id": item.get("location", {}).get("s3Location", {}).get("uri", ""),
+                    "text": content.get("text", ""),
+                    "metadata": {"score": item.get("score", 0)},
+                })
+            return results
+        except (BotoCoreError, ClientError):
+            return []
+
     def query(self, query_text: str, top_k: int = 3) -> List[Dict[str, Any]]:
+        # Tenta primeiro a Bedrock Knowledge Base (RAG gerenciado pela AWS)
+        kb_results = self.query_knowledge_base(query_text, top_k=top_k)
+        if kb_results:
+            return kb_results
+
+        # Fallback: Chroma local
         self._init_chroma()
         if self._collection is not None:
             try:

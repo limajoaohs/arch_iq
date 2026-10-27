@@ -1,7 +1,8 @@
 import os
 import uuid
+import base64
 from typing import Optional, Dict, Any, List
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -10,6 +11,9 @@ from pydantic import BaseModel
 from src.config import settings
 from src.aws.bedrock import BedrockService
 from src.aws.storage import StorageService
+from src.aws.sns import SnsService
+from src.aws.cloudwatch import CloudWatchService
+from src.aws.textract import TextractService
 from src.rag.store import VectorStore
 from src.agents.graph import create_arch_iq_graph
 
@@ -25,6 +29,23 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Autenticacao opcional com Amazon Cognito (se configurado via variaveis de ambiente)
+def get_current_user(authorization: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """Valida token JWT do Cognito se estiver configurado. Retorna None se nao houver Cognito configurado."""
+    if not settings.cognito_user_pool_id or not settings.cognito_client_id:
+        return None  # Autenticacao desativada
+
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Token de autenticacao necessario.")
+
+    token = authorization.split(" ", 1)[1]
+    # Em producao, validar a assinatura JWT com a JWKS do Cognito. Aqui fazemos validacao basica de presença.
+    if not token:
+        raise HTTPException(status_code=401, detail="Token invalido.")
+
+    return {"sub": "cognito-user", "token_present": True}
 
 
 class AuditRequest(BaseModel):
@@ -66,7 +87,12 @@ class AuditResponse(BaseModel):
     technical_report: str
     layperson_explanation: str
     report_location: Optional[str] = None
+    alert_sent: bool = False
     executive_summary: ExecutiveSummary
+
+
+class TextractResponse(BaseModel):
+    extracted_text: str
 
 
 @app.get("/health")
@@ -161,6 +187,7 @@ def audit_architecture(request: AuditRequest):
             technical_report=final_state.get("technical_report", ""),
             layperson_explanation=final_state.get("layperson_explanation", ""),
             report_location=final_state.get("report_location"),
+            alert_sent=final_state.get("alert_sent", False),
             executive_summary=executive_summary
         )
     except Exception as e:
@@ -168,10 +195,30 @@ def audit_architecture(request: AuditRequest):
         raise HTTPException(status_code=500, detail="Erro interno do servidor ao processar a solicitação.")
 
 
+@app.post("/api/extract-text", response_model=TextractResponse)
+async def extract_text(file: UploadFile = File(...)):
+    """Extrai texto de uma imagem ou PDF (diagrama de arquitetura) usando Amazon Textract."""
+    if not textract_service or not textract_service.client:
+        raise HTTPException(status_code=503, detail="Textract nao esta configurado nesta instancia.")
+
+    contents = await file.read()
+    if not contents:
+        raise HTTPException(status_code=400, detail="Arquivo vazio.")
+
+    extracted = textract_service.extract_text_from_bytes(contents)
+    if not extracted:
+        raise HTTPException(status_code=422, detail="Nao foi possivel extrair texto do arquivo enviado.")
+
+    return TextractResponse(extracted_text=extracted)
+
+
 # Inicializar serviços e graph (depois das rotas da API para evitar captura pelo StaticFiles)
 vector_store = VectorStore()
 bedrock_service = BedrockService()
 storage_service = StorageService()
+sns_service = SnsService()
+cloudwatch_service = CloudWatchService()
+textract_service = TextractService()
 
 data_path = os.path.join(os.path.dirname(__file__), "..", "..", "data", "well_architected.json")
 vector_store.seed_data(os.path.abspath(data_path))

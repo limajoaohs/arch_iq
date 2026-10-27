@@ -14,4 +14,7 @@ class ArchIQState(TypedDict, total=False):
     layperson_explanation: str
     score: int
     errors: List[str]
+    duration_seconds: float
+    image_extracted_text: str
+    alert_sent: bool
 

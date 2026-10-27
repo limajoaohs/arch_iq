@@ -1,19 +1,34 @@
 import json
 import re
-from typing import Dict, Any, List
+import time
+from typing import Dict, Any, List, Optional
 from .state import ArchIQState
 from src.aws.bedrock import BedrockService
 from src.aws.storage import StorageService
 from src.aws.amazon_q import AmazonQAssistant
+from src.aws.sns import SnsService
+from src.aws.cloudwatch import CloudWatchService
+from src.aws.textract import TextractService
 from src.rag.retriever import KnowledgeRetriever
 from src.terraform.static_analyzer import analyze_terraform
 
 
 class AgentNodes:
-    def __init__(self, bedrock: BedrockService, retriever: KnowledgeRetriever, storage: StorageService):
+    def __init__(
+        self,
+        bedrock: BedrockService,
+        retriever: KnowledgeRetriever,
+        storage: StorageService,
+        sns: Optional[SnsService] = None,
+        cloudwatch: Optional[CloudWatchService] = None,
+        textract: Optional[TextractService] = None,
+    ):
         self.bedrock = bedrock
         self.retriever = retriever
         self.storage = storage
+        self.sns = sns
+        self.cloudwatch = cloudwatch
+        self.textract = textract
         self.amazon_q = AmazonQAssistant(bedrock)
 
     def parse_input(self, state: ArchIQState) -> Dict[str, Any]:
@@ -56,8 +71,17 @@ class AgentNodes:
     def audit_security(self, state: ArchIQState) -> Dict[str, Any]:
         raw_input = state.get("raw_input", "")
 
+        # Se o input vier como bytes/base64 de imagem ou PDF, extrai texto com Textract
+        image_text = self._extract_text_if_image(raw_input)
+        if image_text:
+            raw_input = image_text
+
+        start = time.time()
+
         # Analise estatica primaria (nao depende de LLM / credenciais AWS)
         static_result = analyze_terraform(raw_input)
+
+        duration = time.time() - start
 
         score = static_result["score"]
         findings = static_result["findings"]
@@ -70,7 +94,27 @@ class AgentNodes:
                 "findings": findings,
             },
             "parsed_services": services,
+            "duration_seconds": duration,
+            "image_extracted_text": image_text,
         }
+
+    def _extract_text_if_image(self, raw_input: str) -> str:
+        """Tenta extrair texto de imagem/PDF via Textract se o input parecer um documento binario."""
+        if not self.textract:
+            return ""
+
+        # Assinaturas magicas comuns (base64 decodificado nao e possivel aqui sem lib,
+        # entao verificamos se o texto comeca com cabecalho de PDF ou e longo o suficiente
+        # para ser base64 de imagem).
+        lower = raw_input.strip().lower()
+        if lower.startswith("%pdf") or len(raw_input) > 1000 and all(c in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=" for c in raw_input.strip()):
+            try:
+                import base64
+                document_bytes = base64.b64decode(raw_input.strip())
+                return self.textract.extract_text_from_bytes(document_bytes)
+            except Exception:
+                return ""
+        return ""
 
     def optimize_finops(self, state: ArchIQState) -> Dict[str, Any]:
         raw_input = state.get("raw_input", "")
@@ -142,6 +186,35 @@ class AgentNodes:
             "remediated_iac": remediated,
             "report_location": s3_uri
         }
+
+    def send_alerts_and_metrics(self, state: ArchIQState) -> Dict[str, Any]:
+        """Envia alerta SNS se o score estiver baixo e grava metricas no CloudWatch."""
+        score = state.get("score", state.get("security_audit", {}).get("score", 80))
+        services = state.get("parsed_services", [])
+        duration = state.get("duration_seconds", 0.0)
+        findings = state.get("security_audit", {}).get("findings", [])
+        session_id = state.get("session_id", "")
+
+        # Alerta SNS quando score abaixo de 75
+        alert_sent = False
+        if score < 75 and self.sns and self.sns.is_enabled():
+            alert_sent = self.sns.publish_low_score_alert(
+                session_id=session_id,
+                score=score,
+                services=services,
+                top_findings=findings[:3],
+            )
+
+        # Metricas CloudWatch
+        if self.cloudwatch:
+            self.cloudwatch.put_audit_metric(
+                score=score,
+                services_count=len(services),
+                duration_seconds=duration,
+                success=True,
+            )
+
+        return {"alert_sent": alert_sent}
 
     def explain_for_layperson(self, state: ArchIQState) -> Dict[str, Any]:
         """Gera uma explicacao didatica da arquitetura para leigos usando o Bedrock.
