@@ -22,6 +22,9 @@ const elements = {
   mermaidDiv: document.querySelector('.mermaid'),
   reportSection: document.querySelector('.report-section'),
   reportContent: document.querySelector('#reportContent'),
+  reportHint: document.querySelector('#reportHint'),
+  btnToggleTechnical: document.querySelector('#btnToggleTechnical'),
+  reportContentTechnical: document.querySelector('#reportContentTechnical'),
   downloadBtn: document.querySelector('.btn-download'),
   fileNameDisplay: document.querySelector('.file-name'),
   errorMessage: document.getElementById('errorMessage'),
@@ -364,7 +367,11 @@ function clearResults() {
   if (elements.mermaidDiv) elements.mermaidDiv.innerHTML = '';
   if (elements.reportSection) {
     elements.reportSection.style.display = 'none';
-    elements.reportSection.innerHTML = '';
+    if (elements.reportContent) elements.reportContent.textContent = '';
+    if (elements.reportContentTechnical) elements.reportContentTechnical.textContent = '';
+    if (elements.reportHint) elements.reportHint.textContent = '';
+    if (elements.btnToggleTechnical) elements.btnToggleTechnical.style.display = 'inline-block';
+    if (elements.reportContentTechnical) elements.reportContentTechnical.style.display = 'none';
   }
   if (elements.downloadBtn) {
     elements.downloadBtn.style.display = 'none';
@@ -452,17 +459,31 @@ function displayResults(result) {
     elements.mermaidDiv.innerHTML = `<pre class="code-block">${escapeHtml(mermaidCode)}</pre>`;
   }
 
-  // Relatório completo
+  // Relatório completo: mostra primeiro a explicacao didatica para leigos
   if (elements.reportSection && elements.reportContent) {
     elements.reportSection.style.display = 'block';
-    let reportContent = result.final_report || '';
-    if (reportContent.includes('graph TD')) {
-      const parts = reportContent.split('---');
-      if (parts.length > 1) {
-        reportContent = parts[parts.length - 1];
-      }
+    const layperson = result.layperson_explanation || result.final_report || '';
+    const technical = result.technical_report || '';
+    elements.reportContent.textContent = layperson;
+    if (elements.reportHint) {
+      elements.reportHint.textContent = layperson
+        ? 'Explicacao gerada por IA (Amazon Bedrock) em linguagem simples para quem nao entende de tecnologia da nuvem.'
+        : '';
     }
-    elements.reportContent.textContent = reportContent;
+    if (elements.btnToggleTechnical) {
+      elements.btnToggleTechnical.style.display = technical ? 'inline-block' : 'none';
+      elements.btnToggleTechnical.onclick = function() {
+        const isHidden = elements.reportContentTechnical.style.display === 'none';
+        elements.reportContentTechnical.style.display = isHidden ? 'block' : 'none';
+        elements.btnToggleTechnical.textContent = isHidden
+          ? 'Ocultar relatorio tecnico detalhado'
+          : 'Ver relatorio tecnico detalhado';
+      };
+    }
+    if (elements.reportContentTechnical) {
+      elements.reportContentTechnical.textContent = technical;
+      elements.reportContentTechnical.style.display = 'none';
+    }
   }
 
   // Botão download

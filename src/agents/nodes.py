@@ -138,9 +138,124 @@ class AgentNodes:
         return {
             "score": score,
             "final_report": report_md,
+            "technical_report": report_md,
             "remediated_iac": remediated,
             "report_location": s3_uri
         }
+
+    def explain_for_layperson(self, state: ArchIQState) -> Dict[str, Any]:
+        """Gera uma explicacao didatica da arquitetura para leigos usando o Bedrock.
+
+        Traduz os resultados tecnicos (score, findings, optimizacoes, servicos)
+        em linguagem simples, explicando cada ponto especifico sem jargon desnecessario.
+        """
+        sec = state.get("security_audit", {})
+        fin = state.get("finops_audit", {})
+        score = sec.get("score", state.get("score", 80))
+        services = state.get("parsed_services", [])
+        knowledge = state.get("retrieved_knowledge", "")
+
+        # Monta resumo dos findings tecnicos para o LLM traduzir
+        findings_lines = []
+        for f in sec.get("findings", []):
+            findings_lines.append(
+                f"- Servico: {f.get('service', 'N/A')} | Severidade: {f.get('severity', 'INFO')} | "
+                f"Problema: {f.get('rule', 'N/A')} | Solucao sugerida: {f.get('remediation', 'N/A')}"
+            )
+        findings_str = "\n".join(findings_lines) if findings_lines else "Nenhum problema de seguranca identificado."
+
+        opt_lines = []
+        for o in fin.get("optimizations", []):
+            opt_lines.append(
+                f"- Servico: {o.get('service', 'N/A')} | Acao: {o.get('action', 'N/A')} | "
+                f"Impacto: {o.get('impact', 'N/A')}"
+            )
+        opt_str = "\n".join(opt_lines) if opt_lines else "Nenhuma otimizacao de custo identificada."
+
+        services_str = ", ".join(services) if services else "Nenhum servico especifico identificado"
+        savings_pct = fin.get("monthly_savings_pct", 0)
+
+        prompt = f"""Voce recebeu o resultado tecnico de uma auditoria de arquitetura na nuvem AWS.
+Sua tarefa e escrever, como se fosse uma pessoa conversando com outra pessoa, uma explicacao simples e acolhedora para alguem que NAO entende nada de tecnologia da nuvem.
+
+Dados tecnicos da auditoria (use apenas como base, nao repita termos brutos):
+- Servicos identificados: {services_str}
+- Nota geral de saude da arquitetura: {score} / 100
+- Economia potencial mensal estimada: {savings_pct}%
+- Diretrizes do AWS Well-Architected encontradas: {knowledge}
+
+Problemas de seguranca encontrados (traduzir cada um em palavras simples):
+{findings_str}
+
+Oportunidades de economia de custo (traduzir cada uma em palavras simples):
+{opt_str}
+
+Escreva em portugues do Brasil, seguindo estas regras:
+- Escreva como quem explica para um amigo ou familiar que nao sabe nada de nuvem. Paragrafos curtos, tom conversacional e acolhedor.
+- Nao use listas numeradas, nao use marcadores com traços (-), nao use secoes rotuladas tipo "a)", "b)", "c)". Escreva fluido, como um texto normal.
+- Nunca jogue uma sigla ou termo tecnico sozinho (EC2, S3, VPC, Security Group, IaC). Sempre que mencionar, explique brevemente o que significa na mesma frase ou na seguinte, de forma natural.
+- Explique cada problema individualmente: o que significa, por que e um risco, o que pode acontecer se nao consertar e como consertar de forma simples.
+- Explique cada chance de economizar dinheiro individualmente.
+- Seja encorajador e nao alarmista. Evite palavras como "critico", "perigo", "alerta" ou "urgente".
+- Voce pode usar analogias simples do dia a dia quando ajudar a entender (por exemplo: comparar um Security Group a um porteiro de predio).
+- Nao invente informacoes que nao estejam nos dados acima.
+- Nao assine o texto, nao diga "sou uma IA", nao use frases como "Aqui esta a explicacao" ou "Como modelo de linguagem". Comece direto com a explicacao."""
+
+        system_prompt = (
+            "Voce escreve como um amigo experiente em tecnologia explicando para um familiar leigo. "
+            "Tom conversacional, paragrafos curtos, sem listas, sem jargon tecnico desnecessario, "
+            "sempre em portugues do Brasil. Nao soe como uma inteligencia artificial."
+        )
+
+        try:
+            explanation = self.bedrock.invoke(
+                prompt=prompt,
+                system_prompt=system_prompt,
+                max_tokens=3000,
+                temperature=0.3,
+            )
+        except Exception:
+            explanation = self._fallback_layperson_explanation(
+                score, services, findings_str, opt_str, savings_pct
+            )
+
+        return {"layperson_explanation": explanation}
+
+    def _fallback_layperson_explanation(self, score, services, findings_str, opt_str, savings_pct) -> str:
+        """Explicacao didatica deterministica usada quando o Bedrock nao esta disponivel."""
+        if score >= 90:
+            status = "otima"
+        elif score >= 75:
+            status = "boa"
+        elif score >= 50:
+            status = "regular"
+        else:
+            status = "precisa de atencao"
+
+        services_lista = ", ".join(services) if services else "varios servicos da nuvem AWS"
+
+        lines = [
+            "Analisamos os servicos da nuvem AWS que voce usou: " + services_lista + ".",
+            f"A nota geral da sua arquitetura e {score} de 100, o que esta considerado {status}.",
+            f"Voce pode economizar cerca de {savings_pct}% por mes nos custos da nuvem.",
+            "",
+        ]
+
+        if findings_str.strip() and "Nenhum problema" not in findings_str:
+            lines.append("Precisamos olhar com calma alguns pontos:")
+            lines.append(findings_str.replace("- ", ""))
+            lines.append("")
+        else:
+            lines.append("Boa notica: nao encontramos problemas graves de seguranca nos servicos analisados.")
+            lines.append("")
+
+        if opt_str.strip() and "Nenhuma otimizacao" not in opt_str:
+            lines.append("Tambem ha chances de economizar dinheiro todo mes:")
+            lines.append(opt_str.replace("- ", ""))
+            lines.append("")
+
+        lines.append("Nosso conselho e levar as coisas com calma. Converse com quem cuida da tecnologia de voce e aplique as melhorias aos poucos, sem pressa.")
+        return "\n".join(lines)
 
     def _generate_mermaid_diagram(self, services: List[str]) -> str:
         """Generate a simple mermaid diagram visualizing the detected services."""

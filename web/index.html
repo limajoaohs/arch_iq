@@ -71,8 +71,13 @@
 
       <!-- Relatório Completo -->
       <section class="report-section" style="display:none;">
-        <h2>Relatorio Completo em Markdown</h2>
+        <h2>Explicacao da Arquitetura (linguagem simples)</h2>
+        <p id="reportHint" style="color:#64748b; font-size:0.85rem; margin-bottom:8px;">Explicacao gerada por IA para quem nao entende de tecnologia da nuvem.</p>
         <pre id="reportContent" class="code-block"></pre>
+        <div style="margin-top:10px;">
+          <button id="btnToggleTechnical" style="font-size:0.85rem; padding:6px 12px; cursor:pointer;">Ver relatorio tecnico detalhado</button>
+        </div>
+        <pre id="reportContentTechnical" class="code-block" style="display:none; margin-top:10px; border-left:4px solid #94a3b8; padding-left:12px;"></pre>
       </section>
 
       <!-- Botão Download -->

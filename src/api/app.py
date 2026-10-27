@@ -63,6 +63,8 @@ class AuditResponse(BaseModel):
     finops_audit: Dict[str, Any]
     remediated_iac: str
     final_report: str
+    technical_report: str
+    layperson_explanation: str
     report_location: Optional[str] = None
     executive_summary: ExecutiveSummary
 
@@ -156,6 +158,8 @@ def audit_architecture(request: AuditRequest):
             finops_audit=fin_audit,
             remediated_iac=final_state.get("remediated_iac", ""),
             final_report=final_state.get("final_report", ""),
+            technical_report=final_state.get("technical_report", ""),
+            layperson_explanation=final_state.get("layperson_explanation", ""),
             report_location=final_state.get("report_location"),
             executive_summary=executive_summary
         )

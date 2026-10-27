@@ -18,6 +18,7 @@ class FallbackWorkflow:
         state.update(self.nodes.audit_security(state))
         state.update(self.nodes.optimize_finops(state))
         state.update(self.nodes.synthesize_report(state))
+        state.update(self.nodes.explain_for_layperson(state))
         return state
 
 
@@ -35,13 +36,15 @@ def create_arch_iq_graph(vector_store: VectorStore, bedrock_service: BedrockServ
         workflow.add_node("audit_security", nodes.audit_security)
         workflow.add_node("optimize_finops", nodes.optimize_finops)
         workflow.add_node("synthesize_report", nodes.synthesize_report)
+        workflow.add_node("explain_for_layperson", nodes.explain_for_layperson)
 
         workflow.add_edge(START, "parse_input")
         workflow.add_edge("parse_input", "retrieve_context")
         workflow.add_edge("retrieve_context", "audit_security")
         workflow.add_edge("audit_security", "optimize_finops")
         workflow.add_edge("optimize_finops", "synthesize_report")
-        workflow.add_edge("synthesize_report", END)
+        workflow.add_edge("synthesize_report", "explain_for_layperson")
+        workflow.add_edge("explain_for_layperson", END)
 
         return workflow.compile()
     except Exception:

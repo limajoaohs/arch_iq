@@ -10,6 +10,8 @@ class ArchIQState(TypedDict, total=False):
     finops_audit: Dict[str, Any]
     remediated_iac: str
     final_report: str
+    technical_report: str
+    layperson_explanation: str
     score: int
     errors: List[str]
 
