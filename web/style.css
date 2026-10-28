@@ -64,6 +64,20 @@ body {
   font-size: 1.1rem;
 }
 
+.auth-bar:not(:empty) {
+  margin-top: 16px;
+}
+
+.btn-auth {
+  background: white;
+  color: var(--primary);
+  border: 1px solid var(--primary);
+  padding: 8px 20px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
 /* Upload Area */
 .upload-area {
   border: 2px dashed var(--border);

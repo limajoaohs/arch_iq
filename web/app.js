@@ -288,6 +288,7 @@ async function handleAnalyze() {
   updateAnalyzeButton();
 
   try {
+    await Auth.ready;
     // Enviar para a API via POST com JSON (não definir Content-Type com boundary fixo)
     const apiUrl = (window.API_CONFIG?.baseUrl || '') + (window.API_CONFIG?.auditEndpoint || '/api/audit');
     const response = await fetch(apiUrl, {
@@ -295,9 +296,15 @@ async function handleAnalyze() {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        ...Auth.headers(),
       },
       body: JSON.stringify({ code_or_prompt: code }),
     });
+
+    if (response.status === 401 && Auth.enabled) {
+      Auth.expired();
+      throw new Error('Faça login (botão "Entrar" no topo) para analisar sua arquitetura.');
+    }
 
     if (!response.ok) {
       let errorDetail = 'Erro na análise';

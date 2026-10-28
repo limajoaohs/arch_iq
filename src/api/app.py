@@ -2,7 +2,8 @@ import os
 import uuid
 import base64
 from typing import Optional, Dict, Any, List
-from fastapi import FastAPI, HTTPException, UploadFile, File, Depends
+import jwt
+from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -32,8 +33,12 @@ app.add_middleware(
 
 
 # Autenticacao opcional com Amazon Cognito (se configurado via variaveis de ambiente)
-def get_current_user(authorization: Optional[str] = None) -> Optional[Dict[str, Any]]:
-    """Valida token JWT do Cognito se estiver configurado. Retorna None se nao houver Cognito configurado."""
+_jwks_client: Optional[jwt.PyJWKClient] = None
+
+
+def get_current_user(authorization: Optional[str] = Header(None)) -> Optional[Dict[str, Any]]:
+    """Valida o access token JWT do Cognito. Retorna None se nao houver Cognito configurado."""
+    global _jwks_client
     if not settings.cognito_user_pool_id or not settings.cognito_client_id:
         return None  # Autenticacao desativada
 
@@ -41,11 +46,22 @@ def get_current_user(authorization: Optional[str] = None) -> Optional[Dict[str, 
         raise HTTPException(status_code=401, detail="Token de autenticacao necessario.")
 
     token = authorization.split(" ", 1)[1]
-    # Em producao, validar a assinatura JWT com a JWKS do Cognito. Aqui fazemos validacao basica de presença.
-    if not token:
-        raise HTTPException(status_code=401, detail="Token invalido.")
+    issuer = f"https://cognito-idp.{settings.aws_region}.amazonaws.com/{settings.cognito_user_pool_id}"
+    if _jwks_client is None:
+        _jwks_client = jwt.PyJWKClient(f"{issuer}/.well-known/jwks.json")  # cacheia as chaves publicas
 
-    return {"sub": "cognito-user", "token_present": True}
+    try:
+        key = _jwks_client.get_signing_key_from_jwt(token).key
+        claims = jwt.decode(token, key, algorithms=["RS256"], issuer=issuer,
+                            options={"require": ["exp", "iss", "sub", "token_use", "client_id"]})
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Token invalido ou expirado.")
+
+    # Access token do Cognito nao tem "aud": o app client vem em "client_id"
+    if claims["token_use"] != "access" or claims["client_id"] != settings.cognito_client_id:
+        raise HTTPException(status_code=401, detail="Token invalido ou expirado.")
+
+    return claims
 
 
 class AuditRequest(BaseModel):
@@ -106,7 +122,7 @@ def health():
 
 
 @app.post("/api/audit", response_model=AuditResponse)
-def audit_architecture(request: AuditRequest):
+def audit_architecture(request: AuditRequest, user: Optional[Dict[str, Any]] = Depends(get_current_user)):
     if not request.code_or_prompt.strip():
         raise HTTPException(status_code=400, detail="code_or_prompt cannot be empty")
 
@@ -196,7 +212,7 @@ def audit_architecture(request: AuditRequest):
 
 
 @app.post("/api/extract-text", response_model=TextractResponse)
-async def extract_text(file: UploadFile = File(...)):
+async def extract_text(file: UploadFile = File(...), user: Optional[Dict[str, Any]] = Depends(get_current_user)):
     """Extrai texto de uma imagem ou PDF (diagrama de arquitetura) usando Amazon Textract."""
     if not textract_service or not textract_service.client:
         raise HTTPException(status_code=503, detail="Textract nao esta configurado nesta instancia.")

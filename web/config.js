@@ -13,5 +13,12 @@ window.API_CONFIG = {
   // URL do backend hospedado no Render
   baseUrl: 'https://arch-iq.onrender.com',
   auditEndpoint: '/api/audit',
-  healthEndpoint: '/health'
+  healthEndpoint: '/health',
+  // Login Cognito (Hosted UI). Deixe vazio para desativar o login.
+  // domain: dominio do User Pool, ex.: 'https://archiq.auth.us-east-1.amazoncognito.com'
+  // clientId: App client publico (sem secret) - o mesmo COGNITO_CLIENT_ID do backend
+  cognito: {
+    domain: '',
+    clientId: ''
+  }
 };
