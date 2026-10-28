@@ -68,3 +68,21 @@ def test_graph_end_to_end_flow(test_vector_store):
     assert "remediated_iac" in final_state
     assert "SECURITY_GROUP" in final_state.get("parsed_services", [])
 
+
+
+class ThrottledBedrock(BedrockService):
+    def invoke(self, *args, **kwargs):
+        from botocore.exceptions import ClientError
+        raise ClientError({"Error": {"Code": "ThrottlingException", "Message": "Too many tokens per day"}}, "Converse")
+
+
+def test_graph_uses_deterministic_fallback_when_bedrock_fails(test_vector_store):
+    graph = create_arch_iq_graph(test_vector_store, ThrottledBedrock(), StorageService())
+    final_state = graph.invoke({
+        "session_id": "test-throttled",
+        "raw_input": 'resource "aws_s3_bucket" "logs" { acl = "public-read" }',
+    })
+    explanation = final_state["layperson_explanation"]
+    assert not explanation.lstrip().startswith("{")
+    assert f"{final_state['score']} de 100" in explanation
+    assert final_state["remediated_iac"] == ""

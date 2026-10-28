@@ -172,10 +172,13 @@ class AgentNodes:
             "---"
         )
 
-        remediated = self.amazon_q.generate_iac_remediation(
-            original_iac=state.get("raw_input", ""),
-            findings=sec.get("findings", [])
-        )
+        try:
+            remediated = self.amazon_q.generate_iac_remediation(
+                original_iac=state.get("raw_input", ""),
+                findings=sec.get("findings", [])
+            )
+        except Exception:
+            remediated = ""  # Bedrock indisponivel: o relatorio segue sem IaC remediado
 
         s3_uri = self.storage.save_report(report_md)
 

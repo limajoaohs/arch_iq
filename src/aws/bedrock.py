@@ -1,7 +1,5 @@
-import json
 from typing import Optional, Dict, Any
 import boto3
-from botocore.exceptions import BotoCoreError, ClientError
 from src.config import settings
 
 
@@ -43,46 +41,6 @@ class BedrockService:
                 "guardrailVersion": self.guardrail_version
             }
 
-        try:
-            response = self.client.converse(**converse_kwargs)
-            return response["output"]["message"]["content"][0]["text"]
-        except (BotoCoreError, ClientError) as e:
-            return self._fallback_invoke(prompt, system_prompt)
-
-    def _fallback_invoke(self, prompt: str, system_prompt: Optional[str] = None) -> str:
-        if "security" in prompt.lower():
-            return json.dumps({
-                "score": 72,
-                "findings": [
-                    {
-                        "severity": "HIGH",
-                        "service": "SecurityGroup",
-                        "rule": "Unrestricted ingress 0.0.0.0/0 on port 22",
-                        "remediation": "Restrict SSH ingress to known corporate CIDR blocks or replace with AWS Systems Manager Session Manager."
-                    },
-                    {
-                        "severity": "MEDIUM",
-                        "service": "S3",
-                        "rule": "Bucket public access configuration not explicitly blocked",
-                        "remediation": "Add aws_s3_bucket_public_access_block resource."
-                    }
-                ]
-            })
-        elif "cost" in prompt.lower() or "finops" in prompt.lower():
-            return json.dumps({
-                "monthly_savings_pct": 28,
-                "optimizations": [
-                    {
-                        "service": "EC2",
-                        "action": "Switch t3/m5 instances to Graviton (t4g/m7g)",
-                        "impact": "Up to 20% direct compute savings and 40% performance gain."
-                    },
-                    {
-                        "service": "VPC",
-                        "action": "Implement S3 and DynamoDB Gateway Endpoints",
-                        "impact": "Eliminates NAT Gateway data processing fees for internal AWS API traffic."
-                    }
-                ]
-            })
-        return "Analysis completed based on AWS Well-Architected Framework guidelines."
-
+        # Erros da AWS (throttling, credenciais, modelo) sobem para o chamador decidir o fallback
+        response = self.client.converse(**converse_kwargs)
+        return response["output"]["message"]["content"][0]["text"]

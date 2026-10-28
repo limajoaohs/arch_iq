@@ -479,11 +479,8 @@ resource "aws_iam_policy" "app" {
     $('statSavings').textContent = `${savings}%`;
 
     // Explicacao para leigos (primeiro) e relatorio tecnico (sob demanda)
-    // O fallback do Bedrock no backend pode devolver JSON cru: nao mostrar isso como explicacao
-    const layperson = String(r.layperson_explanation || '').trim();
-    renderMarkdown($('layperson'), layperson && !layperson.startsWith('{')
-      ? layperson
-      : 'A explicação em linguagem simples não está disponível agora (o serviço de IA não respondeu). O relatório técnico traz todos os detalhes.');
+    renderMarkdown($('layperson'), r.layperson_explanation
+      || 'A explicação em linguagem simples não foi gerada nesta análise. O relatório técnico abaixo traz todos os detalhes.');
     $('servicesList').replaceChildren(...services.map((s) => h('span', null, s)));
     renderMarkdown($('technicalReport'), r.technical_report || r.final_report || '');
     $('secReport').hidden = true;
