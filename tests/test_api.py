@@ -17,12 +17,21 @@ import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+import pytest
 from fastapi.testclient import TestClient
-from src.api.app import app
+from src.api.app import app, get_current_user
 
 # raise_server_exceptions=False permite que os exception handlers do FastAPI
 # tratem exceções e retornem respostas HTTP em vez de re-raise no teste.
 client = TestClient(app, raise_server_exceptions=False)
+
+
+@pytest.fixture(autouse=True)
+def no_auth():
+    """Estes testes cobrem as rotas; a autenticacao Cognito e testada em test_auth.py."""
+    app.dependency_overrides[get_current_user] = lambda: None
+    yield
+    app.dependency_overrides.clear()
 
 
 # ---------------------------------------------------------------------------
