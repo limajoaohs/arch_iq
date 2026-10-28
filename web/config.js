@@ -18,7 +18,7 @@ window.API_CONFIG = {
   // domain: dominio do User Pool, ex.: 'https://archiq.auth.us-east-1.amazoncognito.com'
   // clientId: App client publico (sem secret) - o mesmo COGNITO_CLIENT_ID do backend
   cognito: {
-    domain: '',
-    clientId: ''
+    domain: 'https://us-east-1sxy7vlzkd.auth.us-east-1.amazoncognito.com',
+    clientId: '3jr75sgq3o1r3cm2g81n301crt'
   }
 };
