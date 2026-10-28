@@ -38,8 +38,15 @@ def test_agent_nodes_parse_input():
     assert "EC2" in result["parsed_services"]
 
 
+class FakeBedrock(BedrockService):
+    """Evita chamar o Bedrock real (e gastar a cota diaria) nos testes."""
+    def invoke(self, prompt, *args, **kwargs):
+        self.calls = getattr(self, "calls", 0) + 1
+        return "Explicacao simulada."
+
+
 def test_graph_end_to_end_flow(test_vector_store):
-    bedrock = BedrockService()
+    bedrock = FakeBedrock()
     storage = StorageService()
     graph = create_arch_iq_graph(test_vector_store, bedrock, storage)
 
@@ -67,6 +74,8 @@ def test_graph_end_to_end_flow(test_vector_store):
     assert "final_report" in final_state
     assert "remediated_iac" in final_state
     assert "SECURITY_GROUP" in final_state.get("parsed_services", [])
+    assert final_state["layperson_explanation"] == "Explicacao simulada."
+    assert bedrock.calls == 1  # so a explicacao para leigos usa o Bedrock
 
 
 

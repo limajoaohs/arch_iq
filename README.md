@@ -20,12 +20,12 @@ O fluxo de execucao e organizado em modulos independentes:
    - Recuperacao de Contexto (RAG): Busca regras e recomendacoes especificas para os servicos detectados.
    - Auditoria de Seguranca: Avalia riscos como portas abertas para a internet, falta de criptografia e pontos unicos de falha.
    - Otimizador FinOps: Avalia oportunidades de reducao de custos, como migracao para processadores Graviton e uso de VPC Endpoints para evitar custos de NAT Gateway.
-   - Sintese e Remediacao: Gera o relatorio consolidado com nota de aderencia, diagrama Mermaid e o codigo Terraform com as correcoes aplicadas.
+   - Sintese e Remediacao: Gera o relatorio consolidado com nota de aderencia, diagrama Mermaid e a remediacao sugerida para cada finding.
    - Alertas e Metricas: Publica alerta no Amazon SNS quando o score fica abaixo de 75 e grava metricas no CloudWatch.
    - Explicacao para leigos: Traduz o resultado tecnico em linguagem simples.
-3. **Amazon Bedrock**: Executa o modelo de linguagem (Amazon Nova Lite por padrao) para a explicacao em linguagem simples e a remediacao de IaC, com suporte a Bedrock Guardrails. O score e os findings vem de uma analise estatica deterministica; se o Bedrock estiver indisponivel, a explicacao usa um texto de fallback e a analise continua.
+3. **Amazon Bedrock**: Executa o modelo de linguagem (Amazon Nova Lite por padrao) para a explicacao em linguagem simples (uma chamada por analise, limitada a 1.000 tokens de saida), com suporte a Bedrock Guardrails. O score e os findings vem de uma analise estatica deterministica; se o Bedrock estiver indisponivel, a explicacao usa um texto de fallback e a analise continua.
 4. **RAG**: Amazon Bedrock Knowledge Base (se configurada) com fallback para ChromaDB local, indexando boas praticas do AWS Well-Architected Framework.
-5. **Amazon Q**: Utilizado no processo de desenvolvimento como assistente de codificacao, geracao de testes unitarios e revisao de seguranca, alem de suportar prompts de remediacao no agente.
+5. **Amazon Q**: Utilizado no processo de desenvolvimento como assistente de codificacao, geracao de testes unitarios e revisao de seguranca.
 6. **Armazenamento AWS (S3 e DynamoDB)**:
    - S3: Armazenamento persistente de relatorios e auditorias exportadas.
    - DynamoDB: Armazenamento de checkpoints de estado das sessoes para permitir continuidade em conversas longas.
@@ -48,8 +48,7 @@ arch_iq/
 │   │   ├── storage.py           # Integracoes com S3 e DynamoDB
 │   │   ├── sns.py               # Alerta de score baixo
 │   │   ├── cloudwatch.py        # Metricas de auditoria
-│   │   ├── textract.py          # Extracao de texto de imagens/PDFs
-│   │   └── amazon_q.py          # Wrapper de geracao de remediacao com Amazon Q
+│   │   └── textract.py          # Extracao de texto de imagens/PDFs
 │   ├── rag/
 │   │   ├── store.py             # Gerenciamento do ChromaDB e busca vetorial
 │   │   └── retriever.py         # Recuperador de diretrizes por servico
@@ -158,6 +157,4 @@ Para rodar os testes:
 ```bash
 pytest tests
 ```
-
-Observacao: `test_graph_end_to_end_flow` chama o Bedrock de verdade quando ha credenciais AWS no ambiente.
 

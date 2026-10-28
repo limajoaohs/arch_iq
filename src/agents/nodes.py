@@ -5,7 +5,6 @@ from typing import Dict, Any, List, Optional
 from .state import ArchIQState
 from src.aws.bedrock import BedrockService
 from src.aws.storage import StorageService
-from src.aws.amazon_q import AmazonQAssistant
 from src.aws.sns import SnsService
 from src.aws.cloudwatch import CloudWatchService
 from src.aws.textract import TextractService
@@ -29,7 +28,6 @@ class AgentNodes:
         self.sns = sns
         self.cloudwatch = cloudwatch
         self.textract = textract
-        self.amazon_q = AmazonQAssistant(bedrock)
 
     def parse_input(self, state: ArchIQState) -> Dict[str, Any]:
         raw_text = state.get("raw_input", "")
@@ -172,21 +170,14 @@ class AgentNodes:
             "---"
         )
 
-        try:
-            remediated = self.amazon_q.generate_iac_remediation(
-                original_iac=state.get("raw_input", ""),
-                findings=sec.get("findings", [])
-            )
-        except Exception:
-            remediated = ""  # Bedrock indisponivel: o relatorio segue sem IaC remediado
-
         s3_uri = self.storage.save_report(report_md)
 
         return {
             "score": score,
             "final_report": report_md,
             "technical_report": report_md,
-            "remediated_iac": remediated,
+            # Remediacao via LLM desativada para poupar a cota diaria do Bedrock; campo mantido no contrato da API
+            "remediated_iac": "",
             "report_location": s3_uri
         }
 
@@ -270,8 +261,8 @@ Escreva em portugues do Brasil, seguindo estas regras:
 - Escreva como quem explica para um amigo ou familiar que nao sabe nada de nuvem. Paragrafos curtos, tom conversacional e acolhedor.
 - Nao use listas numeradas, nao use marcadores com traços (-), nao use secoes rotuladas tipo "a)", "b)", "c)". Escreva fluido, como um texto normal.
 - Nunca jogue uma sigla ou termo tecnico sozinho (EC2, S3, VPC, Security Group, IaC). Sempre que mencionar, explique brevemente o que significa na mesma frase ou na seguinte, de forma natural.
-- Explique cada problema individualmente: o que significa, por que e um risco, o que pode acontecer se nao consertar e como consertar de forma simples.
-- Explique cada chance de economizar dinheiro individualmente.
+- Escreva no maximo 5 paragrafos curtos. Comece pelos problemas mais importantes e agrupe os parecidos (por exemplo, todos os de criptografia juntos): o que significa, por que e um risco e como consertar de forma simples.
+- Mencione as chances de economizar dinheiro em um paragrafo.
 - Seja encorajador e nao alarmista. Evite palavras como "critico", "perigo", "alerta" ou "urgente".
 - Voce pode usar analogias simples do dia a dia quando ajudar a entender (por exemplo: comparar um Security Group a um porteiro de predio).
 - Nao invente informacoes que nao estejam nos dados acima.
@@ -287,7 +278,7 @@ Escreva em portugues do Brasil, seguindo estas regras:
             explanation = self.bedrock.invoke(
                 prompt=prompt,
                 system_prompt=system_prompt,
-                max_tokens=3000,
+                max_tokens=1000,
                 temperature=0.3,
             )
         except Exception:

@@ -27,8 +27,12 @@ client = TestClient(app, raise_server_exceptions=False)
 
 
 @pytest.fixture(autouse=True)
-def no_auth():
+def no_auth(monkeypatch):
     """Estes testes cobrem as rotas; a autenticacao Cognito e testada em test_auth.py."""
+    import importlib
+    app_module = importlib.import_module("src.api.app")
+    # Nao gastar a cota diaria do Bedrock nos testes
+    monkeypatch.setattr(app_module.bedrock_service, "invoke", lambda *a, **k: "Explicacao simulada.")
     app.dependency_overrides[get_current_user] = lambda: None
     yield
     app.dependency_overrides.clear()

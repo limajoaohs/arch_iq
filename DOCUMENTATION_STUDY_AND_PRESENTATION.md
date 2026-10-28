@@ -248,8 +248,7 @@ arch_iq/
 │   │   └── __init__.py
 │   ├── aws/                           # Serviços AWS
 │   │   ├── bedrock.py                 # Cliente Bedrock + fallback
-│   │   ├── storage.py                 # S3 + DynamoDB
-│   │   └── amazon_q.py                # Amazon Q Assistant
+│   │   └── storage.py                 # S3 + DynamoDB
 │   ├── rag/                           # ChromaDB e retriever
 │   │   ├── store.py                   # VectorStore + seed_data
 │   │   └── retriever.py               # KnowledgeRetriever + nossa melhoria
