@@ -335,54 +335,17 @@ Escreva em portugues do Brasil, seguindo estas regras:
         if not services or services == ["GENERAL_AWS"]:
             return "*Nenhum serviço específico identificado - diagrama simplificado*"
 
-        # Define service group categories
         compute_services = {"EC2", "LAMBDA", "ECS", "EKS", "ASG"}
-        storage_services = {"S3", "DYNAMODB"}
-        database_services = {"RDS"}
-        networking_services = {"VPC", "ALB", "CLOUDFRONT"}
-        messaging_services = {"SQS", "SNS"}
-        identity_services = {"IAM", "KMS"}
+        present = set(services)
 
-        # Build diagram nodes
-        nodes = []
-        edges = []
+        lines = ["graph TD"] + [f"    {svc}[{svc}]" for svc in services]
 
-        for svc in services:
-            if svc in compute_services:
-                nodes.append(f"    {svc}[{svc}]")
-            elif svc in storage_services:
-                nodes.append(f"    {svc}[{svc}]")
-            elif svc in database_services:
-                nodes.append(f"    {svc}[{svc}]")
-            elif svc in networking_services:
-                nodes.append(f"    {svc}[{svc}]")
-            elif svc in messaging_services:
-                nodes.append(f"    {svc}[{svc}]")
-            elif svc in identity_services:
-                nodes.append(f"    {svc}[{svc}]")
-            else:
-                nodes.append(f"    {svc}[{svc}]")
+        # Conexoes comuns, somente entre servicos que existem no diagrama
+        if "VPC" in present:
+            lines += [f"    VPC -->|hosts| {svc}" for svc in services if svc in compute_services]
+        if {"S3", "CLOUDFRONT"} <= present:
+            lines.append("    CLOUDFRONT -->|distributes| S3")
+        if "IAM" in present:
+            lines += [f"    IAM -.->|manages| {svc}" for svc in services if svc != "IAM"]
 
-        # Add general connections based on common patterns
-        # Compute services often sit behind VPC
-        if any(s in compute_services for s in services) and "VPC" in services:
-            edges.append("    VPC -->|hosts| EC2")
-            edges.append("    VPC -->|hosts| ECS")
-            edges.append("    VPC -->|hosts| Lambda")
-
-        # S3 often used with CloudFront for delivery
-        if "S3" in services and "CLOUDFRONT" in services:
-            edges.append("    CLOUDFRONT -->|distributes| S3")
-
-        # IAM and KMS are foundational
-        if "IAM" in services:
-            edges.append("    IAM -->|manages| all other services")
-
-        # Build mermaid source
-        lines = ["graph TD"]
-        for node in nodes:
-            lines.append(node)
-        for edge in edges:
-            lines.append(edge)
-
-        return "\n".join(lines)
+        return "```mermaid\n" + "\n".join(lines) + "\n```"

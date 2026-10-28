@@ -3,94 +3,234 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ArchIQ - Analisador de Arquitetura Cloud</title>
-  <link rel="stylesheet" href="style.css">
+  <title>ArchIQ · Auditoria de arquitetura AWS</title>
+  <meta name="description" content="Cole seu Terraform e receba score, riscos de segurança, economia de custos e um diagrama da sua arquitetura AWS.">
+  <meta name="theme-color" content="#0B1117">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/archivo@5.1.1/wdth.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/ibm-plex-mono@5.1.1/400.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/ibm-plex-mono@5.1.1/500.css">
+  <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-  <div class="app-container">
-    
-    <!-- Header -->
-    <header class="header">
-      <h1>ArchIQ</h1>
-      <p>Analisador de Arquitetura em Nuvem e Otimização de Custos</p>
+  <!-- Icones (paths do Lucide, ISC) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></symbol>
+    <symbol id="i-coins" viewBox="0 0 24 24"><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></symbol>
+    <symbol id="i-network" viewBox="0 0 24 24"><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+    <symbol id="i-critical" viewBox="0 0 24 24"><path d="M7.86 2h8.28L22 7.86v8.28L16.14 22H7.86L2 16.14V7.86z"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></symbol>
+    <symbol id="i-high" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+    <symbol id="i-medium" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></symbol>
+    <symbol id="i-low" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-login" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17 5-5-5-5"/><path d="M15 12H3"/></symbol>
+    <symbol id="i-offline" viewBox="0 0 24 24"><path d="M12 20h.01"/><path d="M8.5 16.43a5 5 0 0 1 7 0"/><path d="M5 12.86a10 10 0 0 1 5.17-2.69"/><path d="M19 12.86a10 10 0 0 0-2-1.52"/><path d="M2 8.82a15 15 0 0 1 4.18-2.64"/><path d="M22 8.82a15 15 0 0 0-11.29-3.76"/><path d="m2 2 20 20"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M6 3l14 9-14 9z"/></symbol>
+    <symbol id="i-retry" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M10.27 21a2 2 0 0 0 3.46 0"/><path d="M3.26 15.33A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.67C19.41 13.96 18 12.5 18 8A6 6 0 0 0 6 8c0 4.5-1.41 5.96-2.74 7.33"/></symbol>
+  </svg>
+
+  <a class="skip-link" href="#main">Pular para o conteúdo</a>
+
+  <header class="topbar">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="1.5" y="1.5" width="29" height="29" rx="6"/>
+        <path d="M8 21a8 8 0 0 1 16 0"/>
+        <path d="M16 21l4.5-5.5"/>
+      </svg>
+      <span class="brand-name">ArchIQ</span>
+      <span class="brand-tag mono" id="regionTag" hidden></span>
+    </div>
+    <div class="session">
+      <span class="session-user mono" id="authUser" hidden></span>
       <div id="authBar" class="auth-bar"></div>
-    </header>
-
-    <!-- Área de Upload -->
-    <div class="upload-area" id="uploadArea" role="region" aria-label="Área de envio de arquivo Terraform">
-      <p class="upload-instruction">Arraste e solte seu arquivo Terraform (.tf) ou copie o código abaixo</p>
-      <input type="file" accept=".tf,.json,.tf.json" id="fileInput" style="display:none;" aria-hidden="true">
-      <p class="file-name" id="fileNameDisplay" aria-live="polite">Nenhum arquivo selecionado</p>
-      <button class="btn-analyze" id="analyzeBtn" disabled type="button">Analisar Arquitetura</button>
-      <!-- Mensagem de erro na página (substitui alerts) -->
-      <div id="errorMessage" class="error-message" role="alert" aria-live="assertive"></div>
     </div>
+  </header>
 
-    <!-- Editor de código Terraform (alternativa ao upload) -->
-    <div class="code-editor-section">
-      <label for="codeEditor" class="editor-label">Ou cole seu código Terraform aqui:</label>
-      <textarea id="codeEditor" placeholder='Ex: resource "aws_instance" "web" { ... }' rows="6" aria-label="Código Terraform"></textarea>
-      <p class="editor-hint">Aceita arquivos .tf ou código colado diretamente.</p>
-    </div>
-
-    <!-- Loading Overlay -->
-    <div class="loading-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:1000;">
-      <div style="background:white; padding:40px; border-radius:12; text-align:center;">
-        <div style="font-size:3rem; margin-bottom:15;">⏳</div>
-        <h3 style="margin:10px 0;">Analisando...</h3>
-        <p style="color:#64748b; margin:10px 0;">Processando sua arquitetura com Amazon Bedrock</p>
+  <main id="main">
+    <!-- Deslogado -->
+    <section class="hero" id="hero" hidden aria-labelledby="heroTitle">
+      <div class="hero-copy">
+        <p class="eyebrow mono">Terraform → Well-Architected</p>
+        <h1 id="heroTitle">Sua arquitetura AWS, auditada antes de ir para produção.</h1>
+        <p class="hero-lede">Cole o Terraform e receba um score de 0 a 100, os riscos de segurança priorizados, onde dá para economizar e uma explicação que qualquer pessoa entende.</p>
+        <button class="btn btn-primary btn-lg" type="button" id="heroLogin">
+          <svg class="icon" aria-hidden="true"><use href="#i-login"/></svg>Entrar para analisar
+        </button>
+        <p class="hero-note"><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg>Login via Amazon Cognito. Seu código não é compartilhado.</p>
       </div>
-    </div>
-
-    <!-- Seção de Resultados -->
-    <div class="results-section" style="display:none; margin-top:30px;">
-      
-      <!-- Score Card -->
-      <div class="score-card" id="scoreCard">
-        <div class="score-value" id="scoreValue">0</div>
-        <div class="score-desc" id="scoreDesc">Pontuação de adesão</div>
-        <span class="score-badge" id="scoreBadge">ATENÇÃO</span>
-      </div>
-
-      <!-- Findings -->
-      <section>
-        <h2>Findings de Seguranca</h2>
-        <div class="findings-list" id="findingsList"></div>
-      </section>
-
-      <!-- Otimizações FinOps -->
-      <section>
-        <h2>Recomendacoes de FinOps e Custos</h2>
-        <div class="optimizations-list" id="optimizationsList"></div>
-      </section>
-
-      <!-- Diagrama da Arquitetura -->
-      <section>
-        <h2>Diagrama de Arquitetura</h2>
-        <div class="mermaid" id="mermaidDiv"></div>
-      </section>
-
-      <!-- Relatório Completo -->
-      <section class="report-section" style="display:none;">
-        <h2>Explicacao da Arquitetura (linguagem simples)</h2>
-        <p id="reportHint" style="color:#64748b; font-size:0.85rem; margin-bottom:8px;">Explicacao gerada por IA para quem nao entende de tecnologia da nuvem.</p>
-        <pre id="reportContent" class="code-block"></pre>
-        <div style="margin-top:10px;">
-          <button id="btnToggleTechnical" style="font-size:0.85rem; padding:6px 12px; cursor:pointer;">Ver relatorio tecnico detalhado</button>
+      <figure class="hero-figure" aria-hidden="true">
+        <div class="hero-card">
+          <div class="hero-score">
+            <div class="mini-gauge"><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="52"/><circle class="arc" cx="60" cy="60" r="52"/></svg><span class="mono">68</span></div>
+            <p><strong>Regular</strong>4 riscos · 2 economias<br>6 serviços analisados</p>
+          </div>
+          <ul class="hero-lines mono">
+            <li><span class="sev-dot sev-high"></span>S3 · bucket com ACL pública</li>
+            <li><span class="sev-dot sev-medium"></span>RDS · backup &lt; 7 dias</li>
+            <li><span class="sev-dot sev-low"></span>SG · egress irrestrito</li>
+            <li><span class="sev-dot sev-good"></span>EC2 · usar Graviton −20%</li>
+          </ul>
         </div>
-        <pre id="reportContentTechnical" class="code-block" style="display:none; margin-top:10px; border-left:4px solid #94a3b8; padding-left:12px;"></pre>
+      </figure>
+    </section>
+
+    <!-- Entrada -->
+    <section class="workspace" id="workspace" hidden aria-labelledby="wsTitle">
+      <div class="section-head">
+        <h2 id="wsTitle">Nova análise</h2>
+        <p>Cole o Terraform, solte um arquivo <span class="mono">.tf</span> ou envie a imagem/PDF de um diagrama.</p>
+      </div>
+
+      <div class="ws-grid">
+        <div class="editor">
+          <div class="editor-bar">
+            <span class="editor-tab mono" id="editorTab">main.tf</span>
+            <span class="editor-meta mono" id="editorMeta">0 linhas</span>
+          </div>
+          <div class="editor-body">
+            <pre class="editor-gutter mono" id="gutter" aria-hidden="true">1</pre>
+            <textarea id="codeEditor" class="mono" spellcheck="false" autocapitalize="off" autocomplete="off"
+              aria-label="Código Terraform" placeholder='resource "aws_s3_bucket" "logs" {&#10;  bucket = "meus-logs"&#10;}'></textarea>
+          </div>
+        </div>
+
+        <aside class="ws-side">
+          <label class="dropzone" id="dropzone">
+            <input type="file" id="fileInput" class="visually-hidden" accept=".tf,.json,.png,.jpg,.jpeg,.pdf,.tiff">
+            <svg class="icon icon-lg" aria-hidden="true"><use href="#i-upload"/></svg>
+            <span class="dz-title">Solte um arquivo aqui</span>
+            <span class="dz-sub"><span class="mono">.tf</span> vai direto para o editor. Imagem ou PDF de diagrama passa pelo Amazon Textract.</span>
+            <span class="dz-status mono" id="dropStatus" role="status"></span>
+          </label>
+          <button class="btn btn-ghost" type="button" id="exampleBtn">Carregar exemplo de Terraform</button>
+          <button class="btn btn-primary btn-lg" type="button" id="analyzeBtn" disabled>
+            <svg class="icon" aria-hidden="true"><use href="#i-play"/></svg>Analisar arquitetura
+          </button>
+          <p class="ws-hint mono" id="analyzeHint">Escreva ou carregue um Terraform para começar.</p>
+        </aside>
+      </div>
+
+      <!-- Progresso / erro -->
+      <div class="status-panel" id="statusPanel" hidden tabindex="-1"></div>
+    </section>
+
+    <!-- Resultado -->
+    <section class="results" id="results" hidden aria-labelledby="resTitle">
+      <div class="section-head results-head">
+        <div>
+          <p class="eyebrow mono" id="resSession"></p>
+          <h2 id="resTitle">Resultado da auditoria</h2>
+        </div>
+        <nav class="res-nav" aria-label="Seções do resultado">
+          <a href="#secSecurity">Segurança</a>
+          <a href="#secFinops">Custos</a>
+          <a href="#secDiagram">Diagrama</a>
+        </nav>
+      </div>
+
+      <div class="summary">
+        <div class="panel score-panel" id="scorePanel">
+          <div class="gauge" id="gauge">
+            <svg viewBox="0 0 120 120" aria-hidden="true">
+              <circle class="track" cx="60" cy="60" r="52"/>
+              <circle class="threshold" cx="60" cy="60" r="52"/>
+              <circle class="arc" id="gaugeArc" cx="60" cy="60" r="52"/>
+            </svg>
+            <div class="gauge-value">
+              <span class="gauge-num mono" id="gaugeNum">0</span>
+              <span class="gauge-max mono">/100</span>
+            </div>
+          </div>
+          <p class="score-status" id="scoreStatus"></p>
+          <p class="score-note" id="scoreNote"></p>
+          <dl class="stats">
+            <div><dt>Serviços</dt><dd class="mono" id="statServices">0</dd></div>
+            <div><dt>Findings</dt><dd class="mono" id="statFindings">0</dd></div>
+            <div><dt>Economia</dt><dd class="mono" id="statSavings">0%</dd></div>
+          </dl>
+        </div>
+
+        <article class="panel explain-panel">
+          <p class="eyebrow mono">Em linguagem simples</p>
+          <div class="prose prose-lg" id="layperson"></div>
+          <div class="services mono" id="servicesList" aria-label="Serviços detectados"></div>
+          <button class="btn btn-ghost" type="button" id="toggleReport" aria-expanded="false" aria-controls="secReport">
+            <svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>Ver relatório técnico
+          </button>
+        </article>
+      </div>
+
+      <section class="block" id="secSecurity" aria-labelledby="secTitle">
+        <div class="block-head">
+          <h3 id="secTitle"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg>Segurança</h3>
+          <div class="filters" id="sevFilters" role="group" aria-label="Filtrar por severidade"></div>
+        </div>
+        <div class="findings" id="findingsList"></div>
       </section>
 
-      <!-- Botão Download -->
-      <a href="#" class="btn-download" id="downloadBtn" style="display:none;">Download Relatório</a>
+      <section class="block" id="secFinops" aria-labelledby="finTitle">
+        <div class="block-head">
+          <h3 id="finTitle"><svg class="icon" aria-hidden="true"><use href="#i-coins"/></svg>Custos</h3>
+          <p class="block-meta mono" id="finMeta"></p>
+        </div>
+        <div class="savings" id="optimizationsList"></div>
+      </section>
+
+      <section class="block" id="secDiagram" aria-labelledby="diaTitle">
+        <div class="block-head">
+          <h3 id="diaTitle"><svg class="icon" aria-hidden="true"><use href="#i-network"/></svg>Diagrama</h3>
+          <button class="btn btn-ghost btn-sm" type="button" id="expandDiagram">
+            <svg class="icon" aria-hidden="true"><use href="#i-expand"/></svg>Expandir
+          </button>
+        </div>
+        <div class="panel diagram" id="diagram"></div>
+      </section>
+
+      <section class="block" id="secReport" hidden aria-labelledby="repTitle">
+        <div class="block-head">
+          <h3 id="repTitle"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>Relatório técnico</h3>
+          <div class="block-actions">
+            <button class="btn btn-ghost btn-sm" type="button" id="copyReport"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg>Copiar Markdown</button>
+            <button class="btn btn-ghost btn-sm" type="button" id="downloadReport"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>Baixar .md</button>
+          </div>
+        </div>
+        <div class="panel prose" id="technicalReport"></div>
+      </section>
+
+      <div class="results-foot">
+        <button class="btn btn-ghost" type="button" id="newAnalysis"><svg class="icon" aria-hidden="true"><use href="#i-retry"/></svg>Nova análise</button>
+      </div>
+    </section>
+  </main>
+
+  <dialog class="diagram-dialog" id="diagramDialog" aria-labelledby="dlgTitle">
+    <div class="dialog-bar">
+      <h3 id="dlgTitle">Diagrama da arquitetura</h3>
+      <div class="block-actions">
+        <button class="btn btn-ghost btn-icon" type="button" data-zoom="-1" aria-label="Diminuir zoom"><svg class="icon" aria-hidden="true"><use href="#i-minus"/></svg></button>
+        <span class="mono zoom-label" id="zoomLabel">100%</span>
+        <button class="btn btn-ghost btn-icon" type="button" data-zoom="1" aria-label="Aumentar zoom"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></button>
+        <button class="btn btn-ghost btn-icon" type="button" id="closeDialog" aria-label="Fechar"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></button>
+      </div>
     </div>
+    <div class="dialog-canvas" id="dialogCanvas"></div>
+  </dialog>
 
-  </div>
+  <footer class="footer mono">ArchIQ · Terraform + Amazon Bedrock · AWS Well-Architected</footer>
 
-  <!-- Configuracao da API (ajuste a URL do backend aqui) -->
-  <script src="config.js"></script>
-  <!-- JavaScript -->
-  <script src="auth.js"></script>
-  <script src="app.js"></script>
+  <script src="./config.js"></script>
+  <script src="./auth.js"></script>
+  <script src="./app.js"></script>
 </body>
 </html>
