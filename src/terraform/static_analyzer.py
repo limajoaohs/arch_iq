@@ -92,8 +92,9 @@ class TerraformStaticAnalyzer:
         self.category_points[category] = self.category_points.get(category, 0) + points
         self.score += points
 
-    def _add_finding(self, severity: str, service: str, rule: str, remediation: str) -> None:
+    def _add_finding(self, code: str, severity: str, service: str, rule: str, remediation: str) -> None:
         self.findings.append({
+            "code": code,  # identificador estavel usado pelo relatorio para o cliente
             "severity": severity,
             "service": service,
             "rule": rule,
@@ -193,7 +194,7 @@ class TerraformStaticAnalyzer:
     def _score_sg(self, text: str, blocks: List[Dict[str, str]]) -> None:
         sgs = [b for b in blocks if b["type"] == "aws_security_group"]
         if not sgs:
-            self._add_finding("LOW", "SecurityGroup",
+            self._add_finding("sg_missing", "LOW", "SecurityGroup",
                               "Nenhum Security Group definido",
                               "Defina Security Groups restritos para controlar tráfego.")
             return
@@ -224,19 +225,19 @@ class TerraformStaticAnalyzer:
 
                 if any(p in admin_ports for p in ports):
                     sg_ingress_ok = False
-                    self._add_finding("HIGH", "SecurityGroup",
+                    self._add_finding("sg_admin_open", "HIGH", "SecurityGroup",
                                       "SG '%s' permite 0.0.0.0/0 em porta administrativa (%s)" % (b["name"], ", ".join(ports)),
                                       "Restrinja SSH/RDP a CIDRs específicos ou use Session Manager.")
                 else:
                     sg_ingress_ok = False
-                    self._add_finding("MEDIUM", "SecurityGroup",
+                    self._add_finding("sg_port_open", "MEDIUM", "SecurityGroup",
                                       "SG '%s' permite 0.0.0.0/0 nas portas %s" % (b["name"], ", ".join(ports)),
                                       "Restrinja o CIDR de origem ao mínimo necessário.")
 
             # Egress irrestrito: gera finding LOW mas NÃO tira pontos do SG
             # (egress aberto é comum e menos crítico que ingress aberto)
             if re.search(r'egress\s*\{[^}]*protocol\s*=\s*"-1"[^}]*cidr_blocks\s*=\s*\["0\.0\.0\.0/0"\]', body, re.DOTALL):
-                self._add_finding("LOW", "SecurityGroup",
+                self._add_finding("sg_egress_open", "LOW", "SecurityGroup",
                                   "SG '%s' tem egress irrestrito" % b["name"],
                                   "Considere restringir o tráfego de saída.")
 
@@ -260,13 +261,13 @@ class TerraformStaticAnalyzer:
 
             if acl in ("public-read", "public-read-write", "public-write"):
                 bucket_ok = False
-                self._add_finding("HIGH", "S3",
+                self._add_finding("s3_public_acl", "HIGH", "S3",
                                   "Bucket '%s' tem ACL publica (%s)" % (b["name"], acl),
                                   "Defina acl = 'private'.")
 
             if not has_encryption:
                 bucket_ok = False
-                self._add_finding("HIGH", "S3",
+                self._add_finding("s3_unencrypted", "HIGH", "S3",
                                   "Bucket '%s' nao possui criptografia at rest" % b["name"],
                                   "Adicione aws_s3_bucket_encryption.")
 
@@ -276,13 +277,15 @@ class TerraformStaticAnalyzer:
         if has_public_access_block and s3_buckets:
             self._add_points("S3", int(max_points * 0.25))  # bonus por Block Public Access
         elif s3_buckets and not has_public_access_block:
-            self._add_finding("HIGH", "S3",
+            self._add_finding("s3_no_public_block", "HIGH", "S3",
                               "Nenhum aws_s3_bucket_public_access_block configurado",
                               "Adicione aws_s3_bucket_public_access_block.")
 
         if self._has_resource_type(text, "aws_s3_bucket_intelligent_tiering_configuration"):
             self.optimizations.append({
                 "service": "S3",
+                "code": "s3_tiering",
+                "status": "in_use",
                 "action": "S3 Intelligent-Tiering habilitado",
                 "impact": "Reducao de custos de armazenamento por movimentacao automatica entre niveis.",
             })
@@ -290,6 +293,8 @@ class TerraformStaticAnalyzer:
         if self._has_resource_type(text, "aws_s3_bucket_lifecycle_configuration"):
             self.optimizations.append({
                 "service": "S3",
+                "code": "s3_lifecycle",
+                "status": "in_use",
                 "action": "Lifecycle policy para S3 Glacier / Deep Archive",
                 "impact": "Arquivamento de longo prazo com reducao de custo.",
             })
@@ -309,28 +314,28 @@ class TerraformStaticAnalyzer:
             encrypted = self._get_bool(body, "storage_encrypted")
             if encrypted is False:
                 instance_ok = False
-                self._add_finding("HIGH", "RDS",
+                self._add_finding("rds_unencrypted", "HIGH", "RDS",
                                   "RDS '%s' nao possui criptografia at rest" % b["name"],
                                   "Defina storage_encrypted = true.")
 
             publicly_accessible = self._get_bool(body, "publicly_accessible")
             if publicly_accessible is True:
                 instance_ok = False
-                self._add_finding("HIGH", "RDS",
+                self._add_finding("rds_public", "HIGH", "RDS",
                                   "RDS '%s' e publicamente acessivel" % b["name"],
                                   "Defina publicly_accessible = false.")
 
             multi_az = self._get_bool(body, "multi_az")
             if multi_az is False:
                 instance_ok = False
-                self._add_finding("MEDIUM", "RDS",
+                self._add_finding("rds_no_multi_az", "MEDIUM", "RDS",
                                   "RDS '%s' nao esta em Multi-AZ" % b["name"],
                                   "Habilite multi_az = true.")
 
             backup = self._get_attr(body, "backup_retention_period")
             if backup is None or backup == "0":
                 instance_ok = False
-                self._add_finding("MEDIUM", "RDS",
+                self._add_finding("rds_no_backup", "MEDIUM", "RDS",
                                   "RDS '%s' nao possui retençao de backup" % b["name"],
                                   "Defina backup_retention_period >= 7 dias.")
 
@@ -341,7 +346,7 @@ class TerraformStaticAnalyzer:
         if self._has_resource_type(text, "aws_cloudtrail"):
             self._add_points("CloudTrail", self.WEIGHT_CLOUDTRAIL)
         else:
-            self._add_finding("HIGH", "CloudTrail",
+            self._add_finding("no_cloudtrail", "HIGH", "CloudTrail",
                               "Nenhum trail CloudTrail configurado",
                               "Adicione aws_cloudtrail para auditoria de API.")
 
@@ -349,7 +354,7 @@ class TerraformStaticAnalyzer:
         if self._has_resource_type(text, "aws_config_configuration_recorder"):
             self._add_points("Config", self.WEIGHT_CONFIG)
         else:
-            self._add_finding("MEDIUM", "AWS Config",
+            self._add_finding("no_config", "MEDIUM", "AWS Config",
                               "AWS Config nao esta habilitado",
                               "Adicione aws_config_configuration_recorder.")
 
@@ -371,11 +376,11 @@ class TerraformStaticAnalyzer:
             self._add_points("CloudWatch", self.WEIGHT_CLOUDWATCH)
         elif has_log_group or has_alarm:
             self._add_points("CloudWatch", int(self.WEIGHT_CLOUDWATCH * 0.5))
-            self._add_finding("LOW", "CloudWatch",
+            self._add_finding("cloudwatch_partial", "LOW", "CloudWatch",
                               "CloudWatch parcialmente configurado",
                               "Adicione tanto log groups quanto alarmes metricos.")
         else:
-            self._add_finding("MEDIUM", "CloudWatch",
+            self._add_finding("no_cloudwatch", "MEDIUM", "CloudWatch",
                               "Nenhum recurso CloudWatch configurado",
                               "Adicione aws_cloudwatch_log_group e aws_cloudwatch_metric_alarm.")
 
@@ -387,12 +392,12 @@ class TerraformStaticAnalyzer:
             body = b["body"]
             if '"Action"\s*:\s*"*"' in body or '"Action"\s*:\s*\[\s*"*"' in body:
                 has_wildcard = True
-                self._add_finding("HIGH", "IAM",
+                self._add_finding("iam_wildcard_action", "HIGH", "IAM",
                                   "Policy '%s' usa wildcard (*) em Action" % b["name"],
                                   "Use acoes específicas (princípio do menor privilégio).")
             if '"Resource"\s*:\s*"*"' in body or '"Resource"\s*:\s*\[\s*"*"' in body:
                 has_wildcard = True
-                self._add_finding("HIGH", "IAM",
+                self._add_finding("iam_wildcard_resource", "HIGH", "IAM",
                                   "Policy '%s' usa wildcard (*) em Resource" % b["name"],
                                   "Especifique ARNs mínimos necessários.")
 
@@ -421,7 +426,7 @@ class TerraformStaticAnalyzer:
                 has_https = bool(re.search(r'lb_protocol\s*=\s*"(https|ssl)"', body))
                 if has_http and not has_https:
                     elb_ok = False
-                    self._add_finding("HIGH", "ELB",
+                    self._add_finding("elb_http_only", "HIGH", "ELB",
                                       "ELB '%s' expoe apenas HTTP (sem SSL)" % b["name"],
                                       "Adicione listener HTTPS na porta 443.")
 
@@ -429,7 +434,7 @@ class TerraformStaticAnalyzer:
                 has_https_listener = bool(re.search(r'port\s*=\s*"443".*?protocol\s*=\s*"HTTPS"', text, re.DOTALL))
                 if not has_https_listener:
                     elb_ok = False
-                    self._add_finding("HIGH", "ALB",
+                    self._add_finding("alb_no_https", "HIGH", "ALB",
                                       "ALB '%s' nao possui listener HTTPS" % b["name"],
                                       "Adicione aws_lb_listener na porta 443 com HTTPS.")
 
@@ -451,14 +456,14 @@ class TerraformStaticAnalyzer:
             # Bonus pequeno por HA de rede com RDS
             self._add_points("RDS", 2)  # pontos extras ja contados acima
         elif has_rds and len(azs) < 2:
-            self._add_finding("MEDIUM", "RDS",
+            self._add_finding("rds_single_az", "MEDIUM", "RDS",
                               "RDS em apenas uma AZ",
                               "Use subnets em duas ou mais AZs com Multi-AZ.")
 
         if has_alb and len(azs) >= 2:
             self._add_points("ELB", 2)
         elif has_alb and len(azs) < 2:
-            self._add_finding("MEDIUM", "ALB",
+            self._add_finding("alb_single_az", "MEDIUM", "ALB",
                               "ALB em apenas uma AZ",
                               "Distribua o ALB em duas ou mais AZs.")
 
@@ -470,6 +475,8 @@ class TerraformStaticAnalyzer:
         if has_graviton:
             self.optimizations.append({
                 "service": "EC2/RDS",
+                "code": "graviton",
+                "status": "in_use",
                 "action": "Instancias Graviton (ARM64) para custo-beneficio",
                 "impact": "Ate 40% melhor preco-performance vs x86.",
             })
@@ -478,6 +485,8 @@ class TerraformStaticAnalyzer:
         if has_spot:
             self.optimizations.append({
                 "service": "EC2",
+                "code": "spot",
+                "status": "in_use",
                 "action": "Spot Instances para cargas tolerantes a interrupcao",
                 "impact": "Ate 90% de economia vs sob demanda.",
             })
@@ -486,6 +495,8 @@ class TerraformStaticAnalyzer:
         if has_cloudfront:
             self.optimizations.append({
                 "service": "CloudFront",
+                "code": "cloudfront",
+                "status": "in_use",
                 "action": "CDN CloudFront para cache em borda",
                 "impact": "Reducao de saida de dados e melhor latencia.",
             })
@@ -493,6 +504,8 @@ class TerraformStaticAnalyzer:
         if re.search(r'instance_type\s*=\s*"t3\.(micro|small|medium)"', text) and not has_graviton and not has_spot:
             self.optimizations.append({
                 "service": "EC2",
+                "code": "migrate_graviton",
+                "status": "opportunity",
                 "action": "Migre t3 para Graviton t4g ou use Spot",
                 "impact": "Reducao de custo de computacao.",
             })

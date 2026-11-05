@@ -56,7 +56,7 @@ const Auth = (() => {
     if (!bar) return;
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'btn-auth';
+    btn.className = 'btn btn--secondary';
     btn.textContent = getToken() ? 'Sair' : 'Entrar';
     btn.addEventListener('click', getToken() ? logout : login);
     bar.replaceChildren(btn);

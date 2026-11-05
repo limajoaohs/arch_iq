@@ -1,17 +1,44 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
+<!doctype html>
+<html lang="pt-BR" data-type="software" data-radius="sharp" data-buttons="pill" data-motion>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ArchIQ · Auditoria de arquitetura AWS</title>
-  <meta name="description" content="Cole seu Terraform e receba score, riscos de segurança, economia de custos e um diagrama da sua arquitetura AWS.">
-  <meta name="theme-color" content="#0B1117">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/archivo@5.1.1/wdth.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/ibm-plex-mono@5.1.1/400.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/ibm-plex-mono@5.1.1/500.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>ArchIQ: auditoria de Terraform para times AWS</title>
+  <meta name="description" content="Cole o Terraform e receba uma nota de 0 a 100, os riscos em ordem de prioridade e um relatório que o seu cliente entende.">
+  <meta name="theme-color" content="#0A0A0A">
+  <meta name="site-kind" content="software">
+  <meta name="page-type" content="software">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wdth,wght@75..100,400..700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./assets/system.css">
+  <link rel="stylesheet" href="./assets/ui/cards.css">
+  <link rel="stylesheet" href="./assets/motion/motion.css">
+  <link rel="stylesheet" href="./assets/layout/layout.css">
+  <link rel="stylesheet" href="./assets/diagrams/diagram.css">
+  <style>
+    :root {
+      --p-bg: #0a0a0a; --p-surface: #141414; --p-ink: #ffffff; --p-muted: #a8a8a8;
+      --p-accent: #c0c0c0; --p-accent-ink: #0a0a0a; --p-action: #c0c0c0; --p-action-ink: #0a0a0a;
+      --p-inv-bg: #ffffff; --p-inv-surface: #ebebeb; --p-inv-ink: #0a0a0a; --p-inv-muted: #5b5b5b;
+      --p-inv-accent: #0a0a0a; --p-inv-accent-ink: #ffffff; --p-inv-action: #0a0a0a; --p-inv-action-ink: #ffffff;
+      --font-display: "Instrument Sans", system-ui, sans-serif;
+      --font-text: "Instrument Sans", system-ui, sans-serif;
+      --font-mono: "DM Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+      --display-weight: 500;
+      --display-tracking: -0.028em;
+      --display-tracking-xl: -0.036em;
+      --display-stretch: 96%;
+      --ly-scale: 1.04;
+    }
+  </style>
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
+  <!-- type: software
+       deal: hero split, nav nav-centre, close close-word, footer footer-dark, rhythm surface-pairs,
+       buttons pill, mark dots, type instrument. Paleta do projeto: 60% preto, 30% branco, 10% prata. -->
+
   <!-- Icones (paths do Lucide, ISC) -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
     <symbol id="i-shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></symbol>
@@ -21,6 +48,7 @@
     <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></symbol>
     <symbol id="i-copy" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol>
     <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></symbol>
+    <symbol id="i-print" viewBox="0 0 24 24"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"/><rect x="6" y="14" width="12" height="8" rx="1"/></symbol>
     <symbol id="i-expand" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></symbol>
     <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
     <symbol id="i-critical" viewBox="0 0 24 24"><path d="M7.86 2h8.28L22 7.86v8.28L16.14 22H7.86L2 16.14V7.86z"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></symbol>
@@ -39,57 +67,171 @@
     <symbol id="i-bell" viewBox="0 0 24 24"><path d="M10.27 21a2 2 0 0 0 3.46 0"/><path d="M3.26 15.33A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.67C19.41 13.96 18 12.5 18 8A6 6 0 0 0 6 8c0 4.5-1.41 5.96-2.74 7.33"/></symbol>
   </svg>
 
-  <a class="skip-link" href="#main">Pular para o conteúdo</a>
-
-  <header class="topbar">
-    <div class="brand">
-      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
-        <rect x="1.5" y="1.5" width="29" height="29" rx="6"/>
-        <path d="M8 21a8 8 0 0 1 16 0"/>
-        <path d="M16 21l4.5-5.5"/>
-      </svg>
-      <span class="brand-name">ArchIQ</span>
-      <span class="brand-tag mono" id="regionTag" hidden></span>
-    </div>
-    <div class="session">
-      <span class="session-user mono" id="authUser" hidden></span>
-      <div id="authBar" class="auth-bar"></div>
+  <header class="nav nav--centre">
+    <div class="wrap nav__bar">
+      <a class="skip-link" href="#appMain">Pular para o conteúdo</a>
+      <a class="nav__logo" href="#top"><span class="mark" data-mark="dots" aria-hidden="true"></span>ArchIQ</a>
+      <nav class="nav__links" aria-label="Principal" id="landingNav">
+        <div class="nav__item"><a class="nav__link" href="#respostas">Respostas</a></div>
+        <div class="nav__item"><a class="nav__link" href="#cliente">Cliente</a></div>
+        <div class="nav__item"><a class="nav__link" href="#regras">Regras</a></div>
+        <div class="nav__item"><a class="nav__link" href="#perguntas">Perguntas</a></div>
+      </nav>
+      <div class="nav__actions">
+        <span class="app-user" id="regionTag" hidden></span>
+        <span class="app-user" id="authUser" hidden></span>
+        <div id="authBar" class="auth-bar"></div>
+        <button class="btn btn--primary" type="button" data-start>Começar análise</button>
+      </div>
+      <button class="nav__toggle" type="button" aria-expanded="false" aria-label="Menu">
+        <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 5h14M2 13h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
     </div>
   </header>
 
-  <main id="main">
-    <!-- Deslogado -->
-    <section class="hero" id="hero" hidden aria-labelledby="heroTitle">
-      <div class="hero-copy">
-        <p class="eyebrow mono">Terraform → Well-Architected</p>
-        <h1 id="heroTitle">Sua arquitetura AWS, auditada antes de ir para produção.</h1>
-        <p class="hero-lede">Cole o Terraform e receba um score de 0 a 100, os riscos de segurança priorizados, onde dá para economizar e uma explicação que qualquer pessoa entende.</p>
-        <button class="btn btn-primary btn-lg" type="button" id="heroLogin">
-          <svg class="icon" aria-hidden="true"><use href="#i-login"/></svg>Entrar para analisar
-        </button>
-        <p class="hero-note"><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg>Login via Amazon Cognito. Seu código não é compartilhado.</p>
-      </div>
-      <figure class="hero-figure" aria-hidden="true">
-        <div class="hero-card">
-          <div class="hero-score">
-            <div class="mini-gauge"><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="52"/><circle class="arc" cx="60" cy="60" r="52"/></svg><span class="mono">68</span></div>
-            <p><strong>Regular</strong>4 riscos · 2 economias<br>6 serviços analisados</p>
+  <main id="top">
+    <section class="hero hero--split" aria-labelledby="hero-h">
+      <div class="wrap"><div class="hero-text grid hero__grid">
+        <div class="hero__text span-6">
+          <p class="hero__kicker">Nota de 0 a 100 em 8 categorias</p>
+          <h1 id="hero-h">Auditoria de Terraform para times AWS</h1>
+          <p class="hero__lead">Cole o Terraform e receba a nota da arquitetura, os riscos em ordem de prioridade e um relatório que o seu cliente entende sem ajuda.</p>
+          <div class="btn-row">
+            <button class="btn btn--primary" type="button" data-start>Começar análise<svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg></button>
+            <a class="btn btn--secondary" href="#cliente">Ver relatório do cliente</a>
           </div>
-          <ul class="hero-lines mono">
-            <li><span class="sev-dot sev-high"></span>S3 · bucket com ACL pública</li>
-            <li><span class="sev-dot sev-medium"></span>RDS · backup &lt; 7 dias</li>
-            <li><span class="sev-dot sev-low"></span>SG · egress irrestrito</li>
-            <li><span class="sev-dot sev-good"></span>EC2 · usar Graviton −20%</li>
-          </ul>
         </div>
-      </figure>
+        <div class="hero__media span-6 start-7 shot ui" role="img" aria-label="Resultado de uma auditoria com nota 30 de 100 e seis riscos listados">
+          <div class="shot__bar"><span class="shot__tab">main.tf</span><span class="shot__meta">6 serviços</span></div>
+          <div class="shot__score">
+            <div class="shot__gauge" role="img" aria-label="Nota 30 de 100"><span>30</span><small>/100</small></div>
+            <div>
+              <p class="shot__title">Precisa de atenção</p>
+              <p class="shot__sub">10 pontos de melhoria, 6 com prioridade</p>
+            </div>
+          </div>
+          <ul class="shot__list">
+            <li><span class="shot__sev is-high">Alta</span><span class="shot__svc">S3</span>Bucket com ACL pública</li>
+            <li><span class="shot__sev is-high">Alta</span><span class="shot__svc">RDS</span>Banco acessível pela internet</li>
+            <li><span class="shot__sev is-high">Alta</span><span class="shot__svc">RDS</span>Sem criptografia em repouso</li>
+            <li><span class="shot__sev is-high">Alta</span><span class="shot__svc">CloudTrail</span>Nenhum trail configurado</li>
+            <li><span class="shot__sev is-mid">Média</span><span class="shot__svc">Config</span>Mudanças sem acompanhamento</li>
+            <li><span class="shot__sev is-mid">Média</span><span class="shot__svc">CloudWatch</span>Nenhum alarme configurado</li>
+          </ul>
+          <div class="ly-float">
+            <div class="ly-float__row"><span class="ly-live">Para o cliente</span><span>Resolver primeiro</span></div>
+            <div class="ly-float__title">O banco de dados pode ser alcançado pela internet</div>
+          </div>
+        </div>
+      </div></div>
     </section>
 
+    <section class="section ground-inverse" id="respostas">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Três respostas para cada análise</h2>
+          <p>O mesmo Terraform gera uma leitura para cada pessoa envolvida no projeto.</p>
+        </div>
+        <div class="panel lanes-panel">
+          <div class="dg" data-ground="dark" data-diagram>
+            <script type="application/json">{"layout":"lanes","alt":"O Terraform entra no ArchIQ, que gera a resposta técnica, a simplificada e o relatório para o cliente.","input":{"label":"Terraform","icon":"ui:file-text","sub":"main.tf"},"core":{"label":"ArchIQ","icon":"ui:shield"},"lanes":[{"label":"Técnica","icon":"ui:code","done":true,"sub":"Para quem corrige"},{"label":"Simplificada","icon":"ui:pen-line","done":true,"sub":"Para quem decide"},{"label":"Para o cliente","icon":"ui:user","done":true,"sub":"Para quem contrata"}]}</script>
+          </div>
+        </div>
+        <div class="grid answers">
+          <div class="span-4"><h3>Resposta técnica</h3><p>Riscos por severidade, correção de cada regra e diagrama dos serviços.</p></div>
+          <div class="span-4"><h3>Resposta simplificada</h3><p>Um texto curto, escrito pelo Amazon Bedrock, com o resumo do resultado.</p></div>
+          <div class="span-4"><h3>Relatório para o cliente</h3><p>O que cada problema significa, o que pode acontecer e o que pedir à equipe.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="cliente">
+      <div class="wrap">
+        <div class="grid">
+          <div class="span-6 stack-text">
+            <h2>Relatório que o cliente entende sem ajuda</h2>
+            <p class="t-lead">Cada problema vira três respostas simples: o que significa, o que pode acontecer com o negócio e o que fazer agora.</p>
+            <p class="t-body-ink">Sem siglas e sem nomes de recursos. Copie o texto para um e-mail ou salve em PDF para enviar.</p>
+          </div>
+          <div class="span-6 start-7 doc-shot ui" role="img" aria-label="Exemplo real do relatório para o cliente">
+            <p class="doc-shot__pill">Precisa de atenção</p>
+            <p class="doc-shot__sum">O ambiente recebeu nota 30 de 100. Encontramos 10 pontos de melhoria, e 6 deles merecem prioridade.</p>
+            <div class="doc-shot__risk">
+              <p class="doc-shot__prio">Resolver primeiro</p>
+              <p class="doc-shot__title">O banco de dados pode ser alcançado pela internet</p>
+              <dl>
+                <dt>O que significa</dt><dd>O lugar onde ficam as informações mais importantes do sistema está exposto, quando deveria ficar em uma área interna.</dd>
+                <dt>O que pode acontecer</dt><dd>Qualquer pessoa pode tentar se conectar a ele. Um erro de senha ou uma falha pode expor todos os dados.</dd>
+                <dt>O que fazer</dt><dd>Mover o acesso do banco para a rede interna, deixando-o disponível apenas para o próprio sistema.</dd>
+              </dl>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="regras">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Oito categorias formam a nota</h2>
+          <p>A análise de regras não usa IA: o mesmo Terraform sempre recebe a mesma nota.</p>
+        </div>
+        <ul class="weights">
+          <li><span>Regras de rede</span><b style="--w:100%">20 pontos</b></li>
+          <li><span>Armazenamento S3</span><b style="--w:100%">20 pontos</b></li>
+          <li><span>Banco de dados RDS</span><b style="--w:75%">15 pontos</b></li>
+          <li><span>Registro com CloudTrail</span><b style="--w:50%">10 pontos</b></li>
+          <li><span>Mudanças com AWS Config</span><b style="--w:50%">10 pontos</b></li>
+          <li><span>Monitoramento com CloudWatch</span><b style="--w:50%">10 pontos</b></li>
+          <li><span>Permissões IAM</span><b style="--w:50%">10 pontos</b></li>
+          <li><span>Balanceadores com HTTPS</span><b style="--w:25%">5 pontos</b></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section ground-inverse" id="perguntas">
+      <div class="wrap">
+        <div class="grid">
+          <div class="span-6">
+            <h2>Perguntas sobre a análise</h2>
+            <p class="t-lead faq-lead">O que você precisa saber antes de enviar o primeiro arquivo.</p>
+          </div>
+          <div class="faq span-6 start-7">
+            <div class="faq__item"><h3>O ArchIQ precisa acessar minha conta AWS?</h3><p>Não. Ele lê apenas o texto que você cola ou o arquivo que envia.</p></div>
+            <div class="faq__item"><h3>Quais arquivos posso enviar?</h3><p>Arquivos .tf e .json vão direto para o editor. Imagens e PDFs de diagramas passam pelo Amazon Textract.</p></div>
+            <div class="faq__item"><h3>O relatório substitui uma revisão humana?</h3><p>Não. Ele lê a configuração enviada e não testa o sistema em funcionamento. A equipe técnica deve confirmar cada ponto.</p></div>
+            <div class="faq__item"><h3>A nota muda se eu repetir a análise?</h3><p>Não. As regras dão sempre a mesma nota para o mesmo Terraform. Só o texto da resposta simplificada pode variar, porque é escrito por IA.</p></div>
+            <div class="faq__item"><h3>O que acontece com o resultado?</h3><p>O relatório técnico e o estado da análise ficam guardados na AWS do projeto. Não envie senhas no Terraform.</p></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer closing footer--dark ground-inverse" id="contact" aria-labelledby="close-h">
+    <div class="wrap">
+      <div class="closing__cta close--word">
+        <div class="section-head--split">
+          <div><h2 id="close-h">Audite sua arquitetura AWS</h2><p class="t-lead">Cadastro aberto, com login pelo Amazon Cognito.</p></div>
+          <button class="btn btn--primary" type="button" data-start>Começar análise<svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg></button>
+        </div>
+        <p class="close__word" aria-hidden="true">ArchIQ</p>
+      </div>
+      <div class="closing__links">
+        <div class="footer__legal">
+          <span>&copy; 2026 ArchIQ &nbsp; <a href="#respostas">Respostas</a> &nbsp; <a href="#cliente">Cliente</a> &nbsp; <a href="#regras">Regras</a> &nbsp; <a href="#perguntas">Perguntas</a></span>
+          <span class="muted">Terraform, Amazon Bedrock e AWS Well-Architected</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <div class="app" id="appMain" role="main" tabindex="-1" hidden>
     <!-- Entrada -->
-    <section class="workspace" id="workspace" hidden aria-labelledby="wsTitle">
-      <div class="section-head">
+    <section class="workspace" id="workspace" aria-labelledby="wsTitle">
+      <div class="app-head">
         <h2 id="wsTitle">Nova análise</h2>
-        <p>Cole o Terraform, solte um arquivo <span class="mono">.tf</span> ou envie a imagem/PDF de um diagrama.</p>
+        <p>Cole o Terraform, solte um arquivo <span class="mono">.tf</span> ou envie a imagem de um diagrama.</p>
       </div>
 
       <div class="ws-grid">
@@ -110,14 +252,14 @@
             <input type="file" id="fileInput" class="visually-hidden" accept=".tf,.json,.png,.jpg,.jpeg,.pdf,.tiff">
             <svg class="icon icon-lg" aria-hidden="true"><use href="#i-upload"/></svg>
             <span class="dz-title">Solte um arquivo aqui</span>
-            <span class="dz-sub"><span class="mono">.tf</span> vai direto para o editor. Imagem ou PDF de diagrama passa pelo Amazon Textract.</span>
+            <span class="dz-sub"><span class="mono">.tf</span> vai direto para o editor. Imagem ou PDF passa pelo Amazon Textract.</span>
             <span class="dz-status mono" id="dropStatus" role="status"></span>
           </label>
-          <button class="btn btn-ghost" type="button" id="exampleBtn">Carregar exemplo de Terraform</button>
-          <button class="btn btn-primary btn-lg" type="button" id="analyzeBtn" disabled>
+          <button class="btn btn--secondary" type="button" id="exampleBtn">Carregar exemplo</button>
+          <button class="btn btn--primary" type="button" id="analyzeBtn" disabled>
             <svg class="icon" aria-hidden="true"><use href="#i-play"/></svg>Analisar arquitetura
           </button>
-          <p class="ws-hint mono" id="analyzeHint">Escreva ou carregue um Terraform para começar.</p>
+          <p class="ws-hint" id="analyzeHint">Escreva ou carregue um Terraform para começar.</p>
         </aside>
       </div>
 
@@ -127,110 +269,123 @@
 
     <!-- Resultado -->
     <section class="results" id="results" hidden aria-labelledby="resTitle">
-      <div class="section-head results-head">
+      <div class="results-head">
         <div>
-          <p class="eyebrow mono" id="resSession"></p>
+          <p class="res-session mono" id="resSession"></p>
           <h2 id="resTitle">Resultado da auditoria</h2>
         </div>
-        <nav class="res-nav" aria-label="Seções do resultado">
-          <a href="#secSecurity">Segurança</a>
-          <a href="#secFinops">Custos</a>
-          <a href="#secDiagram">Diagrama</a>
-        </nav>
+        <button class="btn btn--secondary" type="button" id="newAnalysis"><svg class="icon" aria-hidden="true"><use href="#i-retry"/></svg>Nova análise</button>
       </div>
 
-      <div class="summary">
-        <div class="panel score-panel" id="scorePanel">
-          <div class="gauge" id="gauge">
-            <svg viewBox="0 0 120 120" aria-hidden="true">
-              <circle class="track" cx="60" cy="60" r="52"/>
-              <circle class="threshold" cx="60" cy="60" r="52"/>
-              <circle class="arc" id="gaugeArc" cx="60" cy="60" r="52"/>
-            </svg>
-            <div class="gauge-value">
-              <span class="gauge-num mono" id="gaugeNum">0</span>
-              <span class="gauge-max mono">/100</span>
-            </div>
+      <div class="score-panel" id="scorePanel">
+        <div class="gauge" id="gauge">
+          <svg viewBox="0 0 120 120" aria-hidden="true">
+            <circle class="track" cx="60" cy="60" r="52"/>
+            <circle class="threshold" cx="60" cy="60" r="52"/>
+            <circle class="arc" id="gaugeArc" cx="60" cy="60" r="52"/>
+          </svg>
+          <div class="gauge-value">
+            <span class="gauge-num mono" id="gaugeNum">0</span>
+            <span class="gauge-max mono">/100</span>
           </div>
+        </div>
+        <div class="score-copy">
           <p class="score-status" id="scoreStatus"></p>
           <p class="score-note" id="scoreNote"></p>
-          <dl class="stats">
-            <div><dt>Serviços</dt><dd class="mono" id="statServices">0</dd></div>
-            <div><dt>Findings</dt><dd class="mono" id="statFindings">0</dd></div>
-            <div><dt>Economia</dt><dd class="mono" id="statSavings">0%</dd></div>
-          </dl>
-        </div>
-
-        <article class="panel explain-panel">
-          <p class="eyebrow mono">Em linguagem simples</p>
-          <div class="prose prose-lg" id="layperson"></div>
           <div class="services mono" id="servicesList" aria-label="Serviços detectados"></div>
-          <button class="btn btn-ghost" type="button" id="toggleReport" aria-expanded="false" aria-controls="secReport">
-            <svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>Ver relatório técnico
-          </button>
+        </div>
+        <dl class="stats">
+          <div><dt>Serviços</dt><dd class="mono" id="statServices">0</dd></div>
+          <div><dt>Riscos</dt><dd class="mono" id="statFindings">0</dd></div>
+          <div><dt>Otimizações</dt><dd class="mono" id="statSavings">0</dd></div>
+        </dl>
+      </div>
+
+      <div class="tabs" role="tablist" aria-label="Respostas da análise" id="resultTabs">
+        <button class="tab" type="button" role="tab" id="tab-simple" aria-controls="panel-simple" aria-selected="true"><span>Simplificada</span><small>Resumo em texto corrido</small></button>
+        <button class="tab" type="button" role="tab" id="tab-client" aria-controls="panel-client" aria-selected="false" tabindex="-1"><span>Para o cliente</span><small>Sem termos técnicos</small></button>
+        <button class="tab" type="button" role="tab" id="tab-tech" aria-controls="panel-tech" aria-selected="false" tabindex="-1"><span>Técnica</span><small>Riscos, custos e diagrama</small></button>
+      </div>
+
+      <div class="tab-panel" role="tabpanel" id="panel-simple" aria-labelledby="tab-simple" tabindex="0">
+        <article class="sheet">
+          <div class="prose prose-lg" id="layperson"></div>
         </article>
       </div>
 
-      <section class="block" id="secSecurity" aria-labelledby="secTitle">
-        <div class="block-head">
-          <h3 id="secTitle"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg>Segurança</h3>
-          <div class="filters" id="sevFilters" role="group" aria-label="Filtrar por severidade"></div>
-        </div>
-        <div class="findings" id="findingsList"></div>
-      </section>
-
-      <section class="block" id="secFinops" aria-labelledby="finTitle">
-        <div class="block-head">
-          <h3 id="finTitle"><svg class="icon" aria-hidden="true"><use href="#i-coins"/></svg>Custos</h3>
-          <p class="block-meta mono" id="finMeta"></p>
-        </div>
-        <div class="savings" id="optimizationsList"></div>
-      </section>
-
-      <section class="block" id="secDiagram" aria-labelledby="diaTitle">
-        <div class="block-head">
-          <h3 id="diaTitle"><svg class="icon" aria-hidden="true"><use href="#i-network"/></svg>Diagrama</h3>
-          <button class="btn btn-ghost btn-sm" type="button" id="expandDiagram">
-            <svg class="icon" aria-hidden="true"><use href="#i-expand"/></svg>Expandir
-          </button>
-        </div>
-        <div class="panel diagram" id="diagram"></div>
-      </section>
-
-      <section class="block" id="secReport" hidden aria-labelledby="repTitle">
-        <div class="block-head">
-          <h3 id="repTitle"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>Relatório técnico</h3>
+      <div class="tab-panel" role="tabpanel" id="panel-client" aria-labelledby="tab-client" tabindex="0" hidden>
+        <div class="client-actions">
+          <p>Pronto para enviar a quem não é da área.</p>
           <div class="block-actions">
-            <button class="btn btn-ghost btn-sm" type="button" id="copyReport"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg>Copiar Markdown</button>
-            <button class="btn btn-ghost btn-sm" type="button" id="downloadReport"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>Baixar .md</button>
+            <button class="btn btn--secondary" type="button" id="copyClient"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg>Copiar texto</button>
+            <button class="btn btn--secondary" type="button" id="printClient"><svg class="icon" aria-hidden="true"><use href="#i-print"/></svg>Salvar em PDF</button>
           </div>
         </div>
-        <div class="panel prose" id="technicalReport"></div>
-      </section>
+        <article class="sheet client-doc" id="clientDoc"></article>
+      </div>
 
-      <div class="results-foot">
-        <button class="btn btn-ghost" type="button" id="newAnalysis"><svg class="icon" aria-hidden="true"><use href="#i-retry"/></svg>Nova análise</button>
+      <div class="tab-panel" role="tabpanel" id="panel-tech" aria-labelledby="tab-tech" tabindex="0" hidden>
+        <section class="block" id="secSecurity" aria-labelledby="secTitle">
+          <div class="block-head">
+            <h3 id="secTitle"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg>Segurança</h3>
+            <div class="filters" id="sevFilters" role="group" aria-label="Filtrar por severidade"></div>
+          </div>
+          <div class="findings" id="findingsList"></div>
+        </section>
+
+        <section class="block" id="secFinops" aria-labelledby="finTitle">
+          <div class="block-head">
+            <h3 id="finTitle"><svg class="icon" aria-hidden="true"><use href="#i-coins"/></svg>Custos</h3>
+            <p class="block-meta mono" id="finMeta"></p>
+          </div>
+          <div class="savings" id="optimizationsList"></div>
+        </section>
+
+        <section class="block" id="secDiagram" aria-labelledby="diaTitle">
+          <div class="block-head">
+            <h3 id="diaTitle"><svg class="icon" aria-hidden="true"><use href="#i-network"/></svg>Diagrama</h3>
+            <button class="btn btn--secondary" type="button" id="expandDiagram">
+              <svg class="icon" aria-hidden="true"><use href="#i-expand"/></svg>Expandir
+            </button>
+          </div>
+          <div class="sheet diagram" id="diagram"></div>
+        </section>
+
+        <section class="block" id="secReport" aria-labelledby="repTitle">
+          <div class="block-head">
+            <h3 id="repTitle"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>Relatório técnico</h3>
+            <div class="block-actions">
+              <button class="btn btn--secondary" type="button" id="copyReport"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg>Copiar Markdown</button>
+              <button class="btn btn--secondary" type="button" id="downloadReport"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>Baixar .md</button>
+            </div>
+          </div>
+          <div class="sheet prose" id="technicalReport"></div>
+        </section>
       </div>
     </section>
-  </main>
+
+    <p class="app-foot mono">ArchIQ · Terraform + Amazon Bedrock · AWS Well-Architected</p>
+  </div>
 
   <dialog class="diagram-dialog" id="diagramDialog" aria-labelledby="dlgTitle">
     <div class="dialog-bar">
       <h3 id="dlgTitle">Diagrama da arquitetura</h3>
       <div class="block-actions">
-        <button class="btn btn-ghost btn-icon" type="button" data-zoom="-1" aria-label="Diminuir zoom"><svg class="icon" aria-hidden="true"><use href="#i-minus"/></svg></button>
+        <button class="icon-btn" type="button" data-zoom="-1" aria-label="Diminuir zoom"><svg class="icon" aria-hidden="true"><use href="#i-minus"/></svg></button>
         <span class="mono zoom-label" id="zoomLabel">100%</span>
-        <button class="btn btn-ghost btn-icon" type="button" data-zoom="1" aria-label="Aumentar zoom"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></button>
-        <button class="btn btn-ghost btn-icon" type="button" id="closeDialog" aria-label="Fechar"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></button>
+        <button class="icon-btn" type="button" data-zoom="1" aria-label="Aumentar zoom"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></button>
+        <button class="icon-btn" type="button" id="closeDialog" aria-label="Fechar"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></button>
       </div>
     </div>
     <div class="dialog-canvas" id="dialogCanvas"></div>
   </dialog>
 
-  <footer class="footer mono">ArchIQ · Terraform + Amazon Bedrock · AWS Well-Architected</footer>
-
   <script src="./config.js"></script>
   <script src="./auth.js"></script>
   <script src="./app.js"></script>
+  <script type="module" src="./assets/system.js"></script>
+  <script type="module" src="./assets/layout/layout.js"></script>
+  <script type="module" src="./assets/motion/motion.js"></script>
+  <script type="module" src="./assets/diagrams/mount.js"></script>
 </body>
 </html>

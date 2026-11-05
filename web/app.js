@@ -12,6 +12,7 @@
   const MAX_TEXT_FILE = 500 * 1024;
   const MAX_DOC_FILE = 10 * 1024 * 1024; // limite sincrono do Textract
   const GAUGE_LENGTH = 326.7; // 2 * PI * r(52)
+  const TABS = ['simple', 'client', 'tech'];
 
   // Bibliotecas carregadas sob demanda, so quando ha resultado (versoes fixadas)
   const CDN = {
@@ -40,6 +41,7 @@
     ['Otimizando custos', 'optimize_finops', 6.5],
     ['Gerando relatório', 'synthesize_report', 9],
     ['Explicando', 'explain_for_layperson', 12],
+    ['Relatório do cliente', 'build_client_report', 16],
   ];
 
   const EXAMPLE_TF = `# Exemplo: aplicacao web com alguns problemas comuns
@@ -97,7 +99,8 @@ resource "aws_iam_policy" "app" {
 `;
 
   const els = {
-    hero: $('hero'), workspace: $('workspace'), results: $('results'),
+    landing: $('top'), landingFooter: $('contact'), app: $('appMain'),
+    workspace: $('workspace'), results: $('results'),
     editor: $('codeEditor'), gutter: $('gutter'), editorTab: $('editorTab'), editorMeta: $('editorMeta'),
     fileInput: $('fileInput'), dropzone: $('dropzone'), dropStatus: $('dropStatus'),
     analyzeBtn: $('analyzeBtn'), analyzeHint: $('analyzeHint'), statusPanel: $('statusPanel'),
@@ -109,6 +112,7 @@ resource "aws_iam_policy" "app" {
   let lastResult = null;
   let pipelineTimer = null;
   let zoom = 1;
+  let diagramPending = false;
 
   /* ----------------------------------------------------------------------
      Helpers de DOM (todo dado da API entra via textContent ou DOMPurify)
@@ -130,7 +134,7 @@ resource "aws_iam_policy" "app" {
     return svg;
   }
 
-  function button(label, iconId, onClick, variant = 'btn-ghost') {
+  function button(label, iconId, onClick, variant = 'btn--secondary') {
     const b = h('button', 'btn ' + variant);
     b.type = 'button';
     if (iconId) b.appendChild(icon(iconId));
@@ -162,14 +166,28 @@ resource "aws_iam_policy" "app" {
     loadRegion();
 
     await Auth.ready;
-    const loggedIn = !Auth.enabled || Boolean(Auth.headers().Authorization);
-    els.hero.hidden = loggedIn;
-    els.workspace.hidden = !loggedIn;
-    if (Auth.enabled && loggedIn) loadUserEmail();
+    if (Auth.enabled && Auth.headers().Authorization) {
+      showApp();
+      loadUserEmail();
+    }
+  }
+
+  function showApp() {
+    document.body.classList.add('is-app');
+    els.landing.hidden = true;
+    els.landingFooter.hidden = true;
+    els.app.hidden = false;
+    window.scrollTo(0, 0);
+  }
+
+  // Sem login configurado, o botao abre o aplicativo direto
+  function start() {
+    if (Auth.enabled) Auth.login();
+    else showApp();
   }
 
   function bindEvents() {
-    $('heroLogin').addEventListener('click', () => Auth.login());
+    document.querySelectorAll('[data-start]').forEach((b) => b.addEventListener('click', start));
 
     els.editor.addEventListener('input', () => { updateEditor(); saveDraft(); });
     els.editor.addEventListener('scroll', () => { els.gutter.scrollTop = els.editor.scrollTop; });
@@ -196,7 +214,12 @@ resource "aws_iam_policy" "app" {
       if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
     });
 
-    $('toggleReport').addEventListener('click', toggleReport);
+    TABS.forEach((name) => $('tab-' + name).addEventListener('click', () => selectTab(name, true)));
+    $('resultTabs').addEventListener('keydown', onTabKey);
+    $('copyClient').addEventListener('click', copyClient);
+    $('printClient').addEventListener('click', printClient);
+    window.addEventListener('afterprint', () => document.body.classList.remove('print-client'));
+
     $('copyReport').addEventListener('click', copyReport);
     $('downloadReport').addEventListener('click', downloadReport);
     $('newAnalysis').addEventListener('click', () => {
@@ -249,7 +272,7 @@ resource "aws_iam_policy" "app" {
     els.analyzeBtn.disabled = !hasCode || busy;
     els.analyzeHint.textContent = busy
       ? 'Análise em andamento…'
-      : hasCode ? 'Pronto. A análise leva de 10 a 30 segundos.' : 'Escreva ou carregue um Terraform para começar.';
+      : hasCode ? 'Pronto para analisar.' : 'Escreva ou carregue um Terraform para começar.';
   }
 
   function setCode(text, name) {
@@ -334,7 +357,7 @@ resource "aws_iam_policy" "app" {
         return showNotice('error', 'i-high', 'A análise falhou',
           'O servidor não conseguiu concluir a auditoria. Seu Terraform continua no editor.',
           `HTTP ${res.status}${detail ? ' · ' + detail : ''}`,
-          [button('Tentar de novo', 'i-retry', analyze, 'btn-primary')]);
+          [button('Tentar de novo', 'i-retry', analyze, 'btn--primary')]);
       }
 
       const result = await res.json();
@@ -345,7 +368,7 @@ resource "aws_iam_policy" "app" {
       showNotice('error', 'i-offline', 'Sem conexão com a API',
         'Não conseguimos falar com o servidor. Se ele estiver hospedado no Render, pode estar acordando: tente de novo em alguns segundos.',
         cfg.baseUrl || window.location.origin,
-        [button('Tentar de novo', 'i-retry', analyze, 'btn-primary')]);
+        [button('Tentar de novo', 'i-retry', analyze, 'btn--primary')]);
     } finally {
       busy = false;
       clearInterval(pipelineTimer);
@@ -358,7 +381,7 @@ resource "aws_iam_policy" "app" {
     $('authUser').hidden = true;
     saveDraft();
     const actions = Auth.enabled
-      ? [button('Entrar novamente', 'i-login', () => Auth.login(), 'btn-primary')]
+      ? [button('Entrar novamente', 'i-login', () => Auth.login(), 'btn--primary')]
       : [];
     showNotice('warn', 'i-lock', Auth.enabled ? 'Sua sessão expirou' : 'A API exige login',
       Auth.enabled
@@ -398,15 +421,15 @@ resource "aws_iam_policy" "app" {
     head.append(h('h3', null, 'Analisando sua arquitetura'), elapsed);
 
     const list = h('ol', 'pipeline');
-    const items = STEPS.map(([name, id]) => {
+    const items = STEPS.map(([name]) => {
       const li = h('li', 'step');
-      li.append(h('span', 'step-node'), h('span', 'step-name', name), h('span', 'step-id mono', id));
+      li.append(h('span', 'step-node'), h('span', 'step-name', name));
       list.appendChild(li);
       return li;
     });
     const live = h('p', 'visually-hidden');
     live.setAttribute('role', 'status');
-    const note = h('p', 'pipeline-note', 'O andamento é estimado: o servidor executa todas as etapas e devolve o resultado de uma vez.');
+    const note = h('p', 'pipeline-note', 'O andamento é estimado: o servidor executa as etapas e devolve o resultado de uma vez.');
 
     panel.replaceChildren(head, list, note, live);
     panel.hidden = false;
@@ -452,6 +475,7 @@ resource "aws_iam_policy" "app" {
     const findings = (r.security_audit && r.security_audit.findings) || [];
     const optimizations = (r.finops_audit && r.finops_audit.optimizations) || [];
     const savings = (r.finops_audit && r.finops_audit.monthly_savings_pct) || 0;
+    const opportunities = optimizations.filter((o) => o.status !== 'in_use').length;
     const services = (r.parsed_services || []).filter((s) => s !== 'GENERAL_AWS');
 
     const time = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -466,8 +490,8 @@ resource "aws_iam_policy" "app" {
     status.textContent = STATUS_LABEL[summary.score_status] || (band === 'good' ? 'Boa' : band === 'mid' ? 'Regular' : 'Atenção');
     const note = $('scoreNote');
     note.textContent = score < 75
-      ? 'Abaixo do limite de alerta (75). Comece pelos findings de severidade alta.'
-      : 'Acima do limite de alerta (75).';
+      ? 'Abaixo do limite de alerta, que é 75. Comece pelos riscos de severidade alta.'
+      : 'Acima do limite de alerta, que é 75.';
     els.scorePanel.querySelector('.alert-pill')?.remove();
     if (r.alert_sent) {
       const pill = h('span', 'alert-pill');
@@ -476,34 +500,131 @@ resource "aws_iam_policy" "app" {
     }
     $('statServices').textContent = services.length;
     $('statFindings').textContent = findings.length;
-    $('statSavings').textContent = `${savings}%`;
+    $('statSavings').textContent = opportunities;
 
-    // Explicacao para leigos (primeiro) e relatorio tecnico (sob demanda)
+    // Tres respostas para o mesmo resultado, uma em cada aba
     renderMarkdown($('layperson'), r.layperson_explanation
       || 'A explicação em linguagem simples não foi gerada nesta análise. O relatório técnico abaixo traz todos os detalhes.');
     $('servicesList').replaceChildren(...services.map((s) => h('span', null, s)));
+    renderClientReport(r.client_report);
     renderMarkdown($('technicalReport'), r.technical_report || r.final_report || '');
-    $('secReport').hidden = true;
-    setReportToggle(false);
 
     renderFindings(findings);
     renderSavings(optimizations, savings);
 
     els.results.hidden = false;
-    reveal();
+    diagramPending = true; // o Mermaid precisa da aba visivel para medir o desenho
+    selectTab('simple', false);
     animateGauge(score);
     els.results.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
-    renderDiagram(r.final_report || '');
   }
 
-  function reveal() {
-    const parts = els.results.querySelectorAll('.summary > *, .block:not([hidden])');
-    parts.forEach((el, i) => {
-      el.classList.remove('is-in');
-      el.classList.add('reveal');
-      el.style.transitionDelay = `${Math.min(i, 5) * 70}ms`;
+  function selectTab(name, focus) {
+    TABS.forEach((tab) => {
+      const on = tab === name;
+      const button = $('tab-' + tab);
+      button.setAttribute('aria-selected', String(on));
+      button.tabIndex = on ? 0 : -1;
+      $('panel-' + tab).hidden = !on;
     });
-    requestAnimationFrame(() => requestAnimationFrame(() => parts.forEach((el) => el.classList.add('is-in'))));
+    if (focus) $('tab-' + name).focus();
+    if (name === 'tech' && diagramPending) {
+      diagramPending = false;
+      renderDiagram((lastResult && lastResult.final_report) || '');
+    }
+  }
+
+  function onTabKey(e) {
+    const step = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
+    if (!step) return;
+    e.preventDefault();
+    const current = TABS.findIndex((tab) => $('tab-' + tab).getAttribute('aria-selected') === 'true');
+    selectTab(TABS[(current + step + TABS.length) % TABS.length], true);
+  }
+
+  /* ----------------------------------------------------------------------
+     Relatorio para o cliente
+     ---------------------------------------------------------------------- */
+  function clientSection(title, ...children) {
+    const section = h('section', 'client-section');
+    section.append(h('h3', null, title), ...children);
+    return section;
+  }
+
+  function clientItems(items) {
+    const list = h('ul', 'client-items');
+    list.append(...items.map((item) => {
+      const li = h('li');
+      li.append(h('strong', null, item.title), h('span', null, item.explanation));
+      return li;
+    }));
+    return list;
+  }
+
+  function clientRisk(risk) {
+    const article = h('article', 'client-risk');
+    const title = h('h5', null, risk.title);
+    if (risk.occurrences > 1) title.append(' ', h('span', 'client-count', `(aparece ${risk.occurrences} vezes)`));
+    const details = h('dl');
+    [['O que significa', risk.meaning], ['O que pode acontecer', risk.impact], ['O que fazer', risk.action]]
+      .forEach(([label, text]) => details.append(h('dt', null, label), h('dd', null, text)));
+    article.append(title, details);
+    return article;
+  }
+
+  function renderClientReport(report) {
+    const doc = $('clientDoc');
+    document.querySelector('.client-actions').hidden = !report;
+
+    // Backend antigo, ainda sem o campo client_report
+    if (!report) {
+      const empty = h('div', 'empty');
+      empty.append(icon('i-high'), 'O servidor ainda não gerou o relatório para o cliente nesta análise.');
+      doc.replaceChildren(empty);
+      return;
+    }
+
+    const lede = h('header', 'client-lede');
+    const when = new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
+    lede.append(
+      h('p', 'client-kicker', `Resultado da análise do seu ambiente na nuvem · ${when}`),
+      h('p', `client-verdict is-${report.tone}`, report.headline),
+      h('p', 'client-summary', report.summary),
+    );
+    const parts = [lede];
+
+    if (report.risks.length) {
+      const groups = [...new Set(report.risks.map((risk) => risk.priority))].map((priority) => {
+        const risks = report.risks.filter((risk) => risk.priority === priority);
+        const group = h('div', `client-group prio-${priority}`);
+        group.append(h('h4', null, risks[0].priority_label), ...risks.map(clientRisk));
+        return group;
+      });
+      parts.push(clientSection('O que encontramos', ...groups));
+    }
+    if (report.savings.length) parts.push(clientSection('Onde dá para economizar', clientItems(report.savings)));
+    if (report.strengths.length) parts.push(clientSection('O que já está bem feito', clientItems(report.strengths)));
+
+    const steps = h('ol', 'client-steps');
+    steps.append(...report.next_steps.map((step) => h('li', null, step)));
+    parts.push(clientSection('Próximos passos', steps), h('p', 'client-note', report.disclaimer));
+    doc.replaceChildren(...parts);
+  }
+
+  async function copyClient() {
+    const btn = $('copyClient');
+    try {
+      await navigator.clipboard.writeText(lastResult.client_report.plain_text);
+      btn.lastChild.textContent = 'Texto copiado';
+    } catch (_) {
+      btn.lastChild.textContent = 'Não foi possível copiar';
+    }
+    setTimeout(() => { btn.lastChild.textContent = 'Copiar texto'; }, 2000);
+  }
+
+  function printClient() {
+    document.body.classList.add('print-client');
+    window.print();
   }
 
   function animateGauge(score) {
@@ -629,14 +750,14 @@ resource "aws_iam_policy" "app" {
         securityLevel: 'strict', // rotulos sanitizados pelo proprio mermaid
         theme: 'base',
         themeVariables: {
-          background: '#111A22',
-          primaryColor: '#16222D',
-          primaryTextColor: '#E6EDF3',
-          primaryBorderColor: '#5CC8E0',
-          lineColor: '#5CC8E0',
-          secondaryColor: '#16222D',
-          tertiaryColor: '#111A22',
-          edgeLabelBackground: '#0B1117',
+          background: '#FFFFFF',
+          primaryColor: '#F2F2F2',
+          primaryTextColor: '#0A0A0A',
+          primaryBorderColor: '#8A8A8A',
+          lineColor: '#595959',
+          secondaryColor: '#F2F2F2',
+          tertiaryColor: '#FFFFFF',
+          edgeLabelBackground: '#FFFFFF',
           fontFamily: 'IBM Plex Mono, monospace',
           fontSize: '14px',
         },
@@ -673,23 +794,6 @@ resource "aws_iam_policy" "app" {
      ---------------------------------------------------------------------- */
   function reportMarkdown() {
     return (lastResult && (lastResult.technical_report || lastResult.final_report)) || '';
-  }
-
-  function setReportToggle(open) {
-    const btn = $('toggleReport');
-    btn.setAttribute('aria-expanded', String(open));
-    btn.lastChild.textContent = open ? 'Ocultar relatório técnico' : 'Ver relatório técnico';
-  }
-
-  function toggleReport() {
-    const section = $('secReport');
-    const open = section.hidden;
-    section.hidden = !open;
-    setReportToggle(open);
-    if (open) {
-      section.classList.remove('reveal');
-      section.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
-    }
   }
 
   async function copyReport() {

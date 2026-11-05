@@ -197,6 +197,7 @@ def test_response_schema_fields():
         "session_id", "score", "parsed_services",
         "security_audit", "finops_audit",
         "remediated_iac", "final_report",
+        "layperson_explanation", "client_report",
         "report_location", "executive_summary",
     ]
     for field in required_top:
@@ -209,3 +210,21 @@ def test_response_schema_fields():
     ]
     for field in exec_required:
         assert field in data["executive_summary"], f"Campo ausente no executive_summary: {field}"
+
+
+def test_client_report_is_returned_apart_from_the_simple_answer():
+    code = 'resource "aws_s3_bucket" "b" {\n  acl = "public-read"\n}\n'
+    data = client.post("/api/audit", json={"code_or_prompt": code}).json()
+    report = data["client_report"]
+    assert report["plain_text"] != data["layperson_explanation"]
+    assert {"headline", "summary", "risks", "next_steps", "disclaimer"} <= set(report)
+    assert report["risks"][0]["priority_label"] == "Resolver primeiro"
+
+
+def test_health_and_audit_do_not_wait_in_the_default_thread_pool():
+    """Sob carga, /health precisa responder e as auditorias nao podem ocupar o pool padrao."""
+    import inspect
+    import importlib
+    app_module = importlib.import_module("src.api.app")
+    assert inspect.iscoroutinefunction(app_module.health)
+    assert inspect.iscoroutinefunction(app_module.audit_architecture)

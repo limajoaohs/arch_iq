@@ -34,3 +34,5 @@ ENV/
 chroma_data/
 *.log
 
+.taste-skill/
+chroma_data_load/

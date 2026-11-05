@@ -23,6 +23,7 @@ class FallbackWorkflow:
         state.update(self.nodes.synthesize_report(state))
         state.update(self.nodes.send_alerts_and_metrics(state))
         state.update(self.nodes.explain_for_layperson(state))
+        state.update(self.nodes.build_client_report(state))
         return state
 
 
@@ -52,6 +53,7 @@ def create_arch_iq_graph(vector_store: VectorStore, bedrock_service: BedrockServ
         workflow.add_node("synthesize_report", nodes.synthesize_report)
         workflow.add_node("send_alerts_and_metrics", nodes.send_alerts_and_metrics)
         workflow.add_node("explain_for_layperson", nodes.explain_for_layperson)
+        workflow.add_node("build_client_report", nodes.build_client_report)
 
         workflow.add_edge(START, "parse_input")
         workflow.add_edge("parse_input", "retrieve_context")
@@ -60,7 +62,8 @@ def create_arch_iq_graph(vector_store: VectorStore, bedrock_service: BedrockServ
         workflow.add_edge("optimize_finops", "synthesize_report")
         workflow.add_edge("synthesize_report", "send_alerts_and_metrics")
         workflow.add_edge("send_alerts_and_metrics", "explain_for_layperson")
-        workflow.add_edge("explain_for_layperson", END)
+        workflow.add_edge("explain_for_layperson", "build_client_report")
+        workflow.add_edge("build_client_report", END)
 
         return workflow.compile()
     except Exception:

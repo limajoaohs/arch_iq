@@ -2,6 +2,7 @@ import os
 import uuid
 import base64
 from typing import Optional, Dict, Any, List
+import anyio
 import jwt
 from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,6 +21,11 @@ from src.agents.graph import create_arch_iq_graph
 
 
 app = FastAPI(title="ArchIQ API", version="1.0.0")
+
+# Auditorias bloqueiam uma thread durante a chamada ao Bedrock. Elas usam um limitador
+# proprio para nao ocupar o pool padrao do FastAPI e travar o resto da API sob carga.
+AUDIT_MAX_THREADS = 40
+_audit_limiter = anyio.CapacityLimiter(AUDIT_MAX_THREADS)
 
 # CORS - liberar frontend (ajuste via variavel de ambiente CORS_ORIGINS)
 cors_origins = os.environ.get("CORS_ORIGINS", "*").split(",")
@@ -92,6 +98,35 @@ class ExecutiveSummary(BaseModel):
     top_optimizations: List[FinopsOptimization]
 
 
+class ClientRisk(BaseModel):
+    id: str
+    priority: int
+    priority_label: str
+    occurrences: int
+    title: str
+    meaning: str
+    impact: str
+    action: str
+
+
+class ClientSaving(BaseModel):
+    title: str
+    explanation: str
+
+
+class ClientReport(BaseModel):
+    """Relatorio para quem nao e da area, separado da explicacao simplificada."""
+    headline: str
+    tone: str
+    summary: str
+    risks: List[ClientRisk]
+    savings: List[ClientSaving]
+    strengths: List[ClientSaving]
+    next_steps: List[str]
+    disclaimer: str
+    plain_text: str
+
+
 class AuditResponse(BaseModel):
     session_id: str
     score: int
@@ -102,6 +137,7 @@ class AuditResponse(BaseModel):
     final_report: str
     technical_report: str
     layperson_explanation: str
+    client_report: ClientReport
     report_location: Optional[str] = None
     alert_sent: bool = False
     executive_summary: ExecutiveSummary
@@ -111,8 +147,10 @@ class TextractResponse(BaseModel):
     extracted_text: str
 
 
+# async de proposito: o /health nao pode esperar na fila de threads, ou a hospedagem
+# considera o servico morto e o reinicia justamente durante um pico de uso.
 @app.get("/health")
-def health():
+async def health():
     return {
         "status": "healthy",
         "service": "ArchIQ",
@@ -121,16 +159,23 @@ def health():
     }
 
 
+# async de proposito: em uma rota sync o FastAPI serializa a resposta de volta no mesmo
+# pool de threads, e uma rajada so devolve as respostas quando a fila inteira termina.
 @app.post("/api/audit", response_model=AuditResponse)
-def audit_architecture(request: AuditRequest, user: Optional[Dict[str, Any]] = Depends(get_current_user)):
+async def audit_architecture(request: AuditRequest, user: Optional[Dict[str, Any]] = Depends(get_current_user)):
     if not request.code_or_prompt.strip():
         raise HTTPException(status_code=400, detail="code_or_prompt cannot be empty")
 
     session_id = request.session_id or str(uuid.uuid4())
+    return await anyio.to_thread.run_sync(
+        _run_audit, request.code_or_prompt, session_id, limiter=_audit_limiter
+    )
 
+
+def _run_audit(code_or_prompt: str, session_id: str) -> AuditResponse:
     initial_state = {
         "session_id": session_id,
-        "raw_input": request.code_or_prompt
+        "raw_input": code_or_prompt
     }
 
     try:
@@ -202,6 +247,7 @@ def audit_architecture(request: AuditRequest, user: Optional[Dict[str, Any]] = D
             final_report=final_state.get("final_report", ""),
             technical_report=final_state.get("technical_report", ""),
             layperson_explanation=final_state.get("layperson_explanation", ""),
+            client_report=ClientReport(**final_state["client_report"]),
             report_location=final_state.get("report_location"),
             alert_sent=final_state.get("alert_sent", False),
             executive_summary=executive_summary

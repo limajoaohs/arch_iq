@@ -12,6 +12,7 @@ class ArchIQState(TypedDict, total=False):
     final_report: str
     technical_report: str
     layperson_explanation: str
+    client_report: Dict[str, Any]
     score: int
     errors: List[str]
     duration_seconds: float

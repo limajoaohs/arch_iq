@@ -22,7 +22,8 @@ O fluxo de execucao e organizado em modulos independentes:
    - Otimizador FinOps: Avalia oportunidades de reducao de custos, como migracao para processadores Graviton e uso de VPC Endpoints para evitar custos de NAT Gateway.
    - Sintese e Remediacao: Gera o relatorio consolidado com nota de aderencia, diagrama Mermaid e a remediacao sugerida para cada finding.
    - Alertas e Metricas: Publica alerta no Amazon SNS quando o score fica abaixo de 75 e grava metricas no CloudWatch.
-   - Explicacao para leigos: Traduz o resultado tecnico em linguagem simples.
+   - Explicacao simplificada: Traduz o resultado tecnico em linguagem simples com o Bedrock.
+   - Relatorio para o cliente: Explica cada risco para quem nao e da area (o que significa, o que pode acontecer e o que fazer). Sai de um catalogo revisado em `src/agents/client_report.py`, sem usar o Bedrock.
 3. **Amazon Bedrock**: Executa o modelo de linguagem (Amazon Nova Lite por padrao) para a explicacao em linguagem simples (uma chamada por analise, limitada a 1.000 tokens de saida), com suporte a Bedrock Guardrails. O score e os findings vem de uma analise estatica deterministica; se o Bedrock estiver indisponivel, a explicacao usa um texto de fallback e a analise continua.
 4. **RAG**: Amazon Bedrock Knowledge Base (se configurada) com fallback para ChromaDB local, indexando boas praticas do AWS Well-Architected Framework.
 5. **Amazon Q**: Utilizado no processo de desenvolvimento como assistente de codificacao, geracao de testes unitarios e revisao de seguranca.
@@ -53,6 +54,7 @@ arch_iq/
 │   │   ├── store.py             # Gerenciamento do ChromaDB e busca vetorial
 │   │   └── retriever.py         # Recuperador de diretrizes por servico
 │   ├── agents/
+│   │   ├── client_report.py     # Relatorio para o cliente (sem LLM)
 │   │   ├── state.py             # Definicao do estado compartilhado (TypedDict)
 │   │   ├── nodes.py             # Implementacao de cada no do grafo
 │   │   └── graph.py             # Montagem e compilacao do StateGraph
@@ -63,9 +65,11 @@ arch_iq/
 │   └── cli.py                   # Interface de linha de comando
 ├── web/                         # Interface web (GitHub Pages)
 │   ├── index.html, style.css, app.js
+│   ├── assets/                  # Base visual (tasteskill, MIT)
 │   ├── auth.js                  # Login Cognito (Hosted UI + PKCE)
 │   └── config.js                # URL do backend e dados publicos do Cognito
-├── tests/                       # Testes da API, autenticacao e grafo
+├── tests/                       # Testes da API, autenticacao, grafo e relatorio do cliente
+│   └── load/                    # Teste de carga local, sem acesso a AWS
 ├── Dockerfile                   # Imagem usada no deploy (Render)
 ├── requirements.txt             # Dependencias completas (desenvolvimento)
 ├── requirements_minimal.txt     # Dependencias de producao (Docker)
@@ -158,3 +162,15 @@ Para rodar os testes:
 pytest tests
 ```
 
+---
+
+## Teste de Carga
+
+O teste roda localmente e nunca toca a AWS: Bedrock, S3, DynamoDB e CloudWatch viram simulacoes com latencia configuravel, e `run_load.py` se recusa a apontar para outro endereco que nao seja o local. Rodar contra producao gastaria a cota do Bedrock e dispararia alertas SNS.
+
+Use um ambiente com `requirements_minimal.txt` para reproduzir o servidor de producao. O cliente de carga precisa do `aiohttp`.
+
+```bash
+python tests/load/server.py --port 8099 --bedrock-latency 2 --aws-latency 0.03
+python tests/load/run_load.py --url http://127.0.0.1:8099 --requests 1000
+```

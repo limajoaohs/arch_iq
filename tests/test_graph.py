@@ -95,3 +95,25 @@ def test_graph_uses_deterministic_fallback_when_bedrock_fails(test_vector_store)
     assert not explanation.lstrip().startswith("{")
     assert f"{final_state['score']} de 100" in explanation
     assert final_state["remediated_iac"] == ""
+
+
+def test_client_report_is_separate_and_does_not_use_bedrock(test_vector_store):
+    bedrock = FakeBedrock()
+    graph = create_arch_iq_graph(test_vector_store, bedrock, StorageService())
+    final_state = graph.invoke({
+        "session_id": "test-client",
+        "raw_input": 'resource "aws_s3_bucket" "logs" {\n  acl = "public-read"\n}\n',
+    })
+    report = final_state["client_report"]
+    assert report["risks"]
+    assert report["plain_text"] != final_state["layperson_explanation"]
+    assert bedrock.calls == 1  # continua so a explicacao simplificada
+
+
+def test_client_report_survives_bedrock_failure(test_vector_store):
+    graph = create_arch_iq_graph(test_vector_store, ThrottledBedrock(), StorageService())
+    final_state = graph.invoke({
+        "session_id": "test-client-throttled",
+        "raw_input": 'resource "aws_s3_bucket" "logs" {\n  acl = "public-read"\n}\n',
+    })
+    assert final_state["client_report"]["risks"]

@@ -2,6 +2,7 @@ import json
 import re
 import time
 from typing import Dict, Any, List, Optional
+from .client_report import build_client_report
 from .state import ArchIQState
 from src.aws.bedrock import BedrockService
 from src.aws.storage import StorageService
@@ -287,6 +288,18 @@ Escreva em portugues do Brasil, seguindo estas regras:
             )
 
         return {"layperson_explanation": explanation}
+
+    def build_client_report(self, state: ArchIQState) -> Dict[str, Any]:
+        """Monta o relatorio para o cliente a partir das regras, sem usar o Bedrock."""
+        sec = state.get("security_audit", {})
+        fin = state.get("finops_audit", {})
+        report = build_client_report(
+            score=sec.get("score", state.get("score", 0)),
+            findings=sec.get("findings", []),
+            optimizations=fin.get("optimizations", []),
+            services=state.get("parsed_services", []),
+        )
+        return {"client_report": report}
 
     def _fallback_layperson_explanation(self, score, services, findings_str, opt_str, savings_pct) -> str:
         """Explicacao didatica deterministica usada quando o Bedrock nao esta disponivel."""
