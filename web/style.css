@@ -455,7 +455,7 @@ body.is-app [data-start] { display: none; }
 .ask-chip:focus-visible, .ask-form textarea:focus-visible { outline: 2px solid #0a0a0a; outline-offset: 2px; }
 .ask-form { display: flex; gap: var(--s-2); align-items: flex-end; border-top: 1px solid var(--a-line); padding-top: var(--s-4); }
 .ask-form textarea {
-  flex: 1; min-width: 0; resize: none; font: inherit; font-size: 16px; line-height: 1.5;
+  flex: 1; min-width: 0; resize: none; overflow-y: auto; scrollbar-width: none; font: inherit; font-size: 16px; line-height: 1.5;
   min-height: 48px; max-height: 160px; padding: 11px 14px;
   color: var(--a-text); background: var(--a-surface); border: 1px solid var(--a-line-strong); border-radius: var(--r-md);
 }
@@ -580,7 +580,9 @@ body.is-app [data-start] { display: none; }
   .client-actions .block-actions { width: 100%; }
   .ask-sheet { padding: var(--s-4); }
   .ask-msg { max-width: 100%; }
-  .ask-form .btn--primary span { display: none; }
+  .ask-form .btn--primary { width: 48px; padding: 0; justify-content: center; }
+  .ask-form .btn--primary span, .ask-form .btn--primary::after { display: none; }
+  .ask-chip { max-width: 100%; text-align: left; }
   .finding summary { grid-template-columns: auto 1fr auto; padding: var(--s-3) var(--s-4); }
   .finding .svc { grid-column: 2; grid-row: 1; }
   .finding .rule { grid-column: 1 / -1; grid-row: 2; }

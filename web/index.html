@@ -103,22 +103,22 @@
             <a class="btn btn--secondary" href="#cliente">Ver relatório do cliente</a>
           </div>
         </div>
-        <div class="hero__media span-6 start-7 shot ui" role="img" aria-label="Resultado de uma auditoria com nota 30 de 100 e seis riscos listados">
+        <div class="hero__media span-6 start-7 shot ui" role="img" aria-label="Resultado de uma auditoria com nota 0 de 100 e seis riscos listados">
           <div class="shot__bar"><span class="shot__tab">main.tf</span><span class="shot__meta">6 serviços</span></div>
           <div class="shot__score">
-            <div class="shot__gauge" role="img" aria-label="Nota 30 de 100"><span>30</span><small>/100</small></div>
+            <div class="shot__gauge" role="img" aria-label="Nota 0 de 100"><span>0</span><small>/100</small></div>
             <div>
               <p class="shot__title">Precisa de atenção</p>
-              <p class="shot__sub">10 pontos de melhoria, 6 com prioridade</p>
+              <p class="shot__sub">12 pontos de melhoria, 8 com prioridade</p>
             </div>
           </div>
           <ul class="shot__list">
+            <li><span class="shot__sev is-high">Alta</span><span class="shot__svc">IAM</span>Policy com permissão total (*)</li>
+            <li><span class="shot__sev is-high">Alta</span><span class="shot__svc">SG</span>SSH aberto para a internet</li>
             <li><span class="shot__sev is-high">Alta</span><span class="shot__svc">S3</span>Bucket com ACL pública</li>
             <li><span class="shot__sev is-high">Alta</span><span class="shot__svc">RDS</span>Banco acessível pela internet</li>
             <li><span class="shot__sev is-high">Alta</span><span class="shot__svc">RDS</span>Sem criptografia em repouso</li>
             <li><span class="shot__sev is-high">Alta</span><span class="shot__svc">CloudTrail</span>Nenhum trail configurado</li>
-            <li><span class="shot__sev is-mid">Média</span><span class="shot__svc">Config</span>Mudanças sem acompanhamento</li>
-            <li><span class="shot__sev is-mid">Média</span><span class="shot__svc">CloudWatch</span>Nenhum alarme configurado</li>
           </ul>
           <div class="ly-float">
             <div class="ly-float__row"><span class="ly-live">Para o cliente</span><span>Resolver primeiro</span></div>
@@ -157,7 +157,7 @@
           </div>
           <div class="span-6 start-7 doc-shot ui" role="img" aria-label="Exemplo real do relatório para o cliente">
             <p class="doc-shot__pill">Precisa de atenção</p>
-            <p class="doc-shot__sum">O ambiente recebeu nota 30 de 100. Encontramos 10 pontos de melhoria, e 6 deles merecem prioridade.</p>
+            <p class="doc-shot__sum">O ambiente recebeu nota 0 de 100. Encontramos 12 pontos de melhoria, e 8 deles merecem prioridade.</p>
             <div class="doc-shot__risk">
               <p class="doc-shot__prio">Resolver primeiro</p>
               <p class="doc-shot__title">O banco de dados pode ser alcançado pela internet</p>
@@ -376,7 +376,7 @@
           <div class="ask-suggestions" id="askSuggestions" role="group" aria-label="Sugestões de pergunta"></div>
           <form class="ask-form" id="askForm">
             <label class="visually-hidden" for="askInput">Sua pergunta</label>
-            <textarea id="askInput" rows="1" maxlength="500" placeholder="Ex.: o que pode acontecer se eu não resolver isso?" autocomplete="off"></textarea>
+            <textarea id="askInput" rows="1" maxlength="500" placeholder="Escreva sua pergunta" autocomplete="off"></textarea>
             <button class="btn btn--primary" type="submit" id="askSend" aria-label="Perguntar"><svg class="icon" aria-hidden="true"><use href="#i-send"/></svg><span>Perguntar</span></button>
           </form>
         </div>

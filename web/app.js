@@ -124,8 +124,9 @@ resource "aws_iam_policy" "app" {
     chat = [];
     const risks = (r.client_report && r.client_report.risks) || [];
     const hasSavings = ((r.client_report && r.client_report.savings) || []).length > 0;
+    // Sem numero: o painel conta achados tecnicos e o relatorio agrupa riscos, e os dois nao batem
     const welcome = risks.length
-      ? `Encontrei ${risks.length === 1 ? 'um ponto' : risks.length + ' pontos'} para melhorar. Pergunte o que quiser sobre eles, do jeito que você falaria com alguém.`
+      ? 'A análise encontrou pontos para melhorar. Pergunte o que quiser sobre eles, do jeito que você falaria com alguém.'
       : 'Pergunte o que quiser sobre esta análise, do jeito que você falaria com alguém.';
     $('askLog').replaceChildren(chatBubble('assistant', welcome));
 
