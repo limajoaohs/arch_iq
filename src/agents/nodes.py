@@ -122,8 +122,9 @@ class AgentNodes:
         static_result = analyze_terraform(raw_input)
         optimizations = static_result["optimizations"]
 
-        # Calcular percentual de economia baseado nas otimizacoes encontradas
-        savings_pct = min(60, len(optimizations) * 12)
+        # Economia potencial: so conta o que ainda nao esta em uso
+        opportunities = [o for o in optimizations if o.get("status") == "opportunity"]
+        savings_pct = min(60, len(opportunities) * 12)
 
         return {"finops_audit": {"monthly_savings_pct": savings_pct, "optimizations": optimizations}}
 

@@ -113,6 +113,87 @@ resource "aws_iam_policy" "app" {
   let pipelineTimer = null;
   let zoom = 1;
   let diagramPending = false;
+  let analyzedCode = '';
+  let chat = [];        // historico enviado ao agente: [{ role, content }]
+  let asking = false;
+
+  /* ----------------------------------------------------------------------
+     Agente de perguntas (POST /api/ask)
+     ---------------------------------------------------------------------- */
+  function resetChat(r) {
+    chat = [];
+    const risks = (r.client_report && r.client_report.risks) || [];
+    const hasSavings = ((r.client_report && r.client_report.savings) || []).length > 0;
+    const welcome = risks.length
+      ? `Encontrei ${risks.length === 1 ? 'um ponto' : risks.length + ' pontos'} para melhorar. Pergunte o que quiser sobre eles, do jeito que você falaria com alguém.`
+      : 'Pergunte o que quiser sobre esta análise, do jeito que você falaria com alguém.';
+    $('askLog').replaceChildren(chatBubble('assistant', welcome));
+
+    const suggestions = [
+      risks.length ? 'O que devo resolver primeiro?' : 'Meu sistema está seguro?',
+      'O que essa nota quer dizer?',
+      hasSavings ? 'Como posso gastar menos?' : 'Dá para gastar menos com a nuvem?',
+    ];
+    if (risks[0]) suggestions.push('O que pode acontecer se eu não resolver o primeiro problema?');
+    $('askSuggestions').replaceChildren(...suggestions.map((q) => {
+      const b = h('button', 'ask-chip', q);
+      b.type = 'button';
+      b.addEventListener('click', () => ask(q));
+      return b;
+    }));
+    $('askInput').value = '';
+  }
+
+  function chatBubble(role, text, pending) {
+    const item = h('div', 'ask-msg ask-msg--' + role + (pending ? ' is-pending' : ''));
+    const who = h('span', 'ask-who mono', role === 'user' ? 'Você' : 'ArchIQ');
+    const body = h('div', 'ask-text');
+    // texto puro: cada paragrafo vira um <p> via textContent
+    String(text).split(/\n{2,}/).forEach((p) => p.trim() && body.appendChild(h('p', null, p.trim())));
+    item.append(who, body);
+    return item;
+  }
+
+  async function ask(raw) {
+    const question = String(raw || '').trim().slice(0, 500);
+    if (!question || asking || !analyzedCode) return;
+    asking = true;
+    const log = $('askLog');
+    const input = $('askInput');
+    const send = $('askSend');
+    input.value = '';
+    input.style.height = '';
+    send.disabled = true;
+    log.appendChild(chatBubble('user', question));
+    const pending = chatBubble('assistant', 'Pensando na resposta…', true);
+    log.appendChild(pending);
+    pending.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'nearest' });
+
+    let answer;
+    try {
+      await Auth.ready;
+      const res = await fetch(api(cfg.askEndpoint || '/api/ask'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...Auth.headers() },
+        body: JSON.stringify({ code_or_prompt: analyzedCode, question, history: chat.slice(-6) }),
+      });
+      if (res.status === 401) {
+        answer = 'Sua sessão expirou. Entre de novo para continuar perguntando.';
+      } else if (!res.ok) {
+        answer = 'Não consegui responder agora. Tente de novo em alguns segundos.';
+      } else {
+        answer = (await res.json()).answer;
+        chat.push({ role: 'user', content: question }, { role: 'assistant', content: answer });
+      }
+    } catch (_) {
+      answer = 'Sem conexão com o servidor. Confira sua internet e tente de novo.';
+    }
+    pending.replaceWith(chatBubble('assistant', answer));
+    log.lastChild.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'nearest' });
+    asking = false;
+    send.disabled = false;
+    input.focus({ preventScroll: true });
+  }
 
   /* ----------------------------------------------------------------------
      Helpers de DOM (todo dado da API entra via textContent ou DOMPurify)
@@ -225,6 +306,15 @@ resource "aws_iam_policy" "app" {
     $('newAnalysis').addEventListener('click', () => {
       els.workspace.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
       els.editor.focus({ preventScroll: true });
+    });
+
+    $('askForm').addEventListener('submit', (e) => { e.preventDefault(); ask($('askInput').value); });
+    $('askInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); ask(e.target.value); }
+    });
+    $('askInput').addEventListener('input', (e) => {
+      e.target.style.height = 'auto';
+      e.target.style.height = Math.min(e.target.scrollHeight, 160) + 'px';
     });
 
     $('expandDiagram').addEventListener('click', openDiagram);
@@ -363,6 +453,7 @@ resource "aws_iam_policy" "app" {
       const result = await res.json();
       await finishPipeline();
       els.statusPanel.hidden = true;
+      analyzedCode = code; // o agente de perguntas responde sobre exatamente este codigo
       renderResults(result);
     } catch (_) {
       showNotice('error', 'i-offline', 'Sem conexão com a API',
@@ -507,6 +598,7 @@ resource "aws_iam_policy" "app" {
       || 'A explicação em linguagem simples não foi gerada nesta análise. O relatório técnico abaixo traz todos os detalhes.');
     $('servicesList').replaceChildren(...services.map((s) => h('span', null, s)));
     renderClientReport(r.client_report);
+    resetChat(r);
     renderMarkdown($('technicalReport'), r.technical_report || r.final_report || '');
 
     renderFindings(findings);

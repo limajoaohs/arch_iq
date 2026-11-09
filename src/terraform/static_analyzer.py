@@ -36,6 +36,13 @@ class TerraformStaticAnalyzer:
     WEIGHT_IAM = 10
     WEIGHT_ELB = 5
 
+    # "*" sozinho ou dentro de uma lista, tanto em JSON ("Action": "*")
+    # quanto em jsonencode do HCL (Action = ["s3:Get*", "*"]).
+    _IAM_WILDCARD = {
+        key: re.compile(rf'\b{key}"?\s*[:=]\s*(?:"\*"|\[[^\]]*"\*")')
+        for key in ("Action", "Resource")
+    }
+
     def __init__(self) -> None:
         self.score: int = 0
         self.findings: List[Dict[str, str]] = []
@@ -64,7 +71,16 @@ class TerraformStaticAnalyzer:
 
     @staticmethod
     def _extract_ingress_blocks(body: str) -> List[str]:
-        return re.findall(r"ingress\s*\{(.*?)\n\}", body, re.DOTALL)
+        # Casa as chaves em vez de exigir "}" na coluna 0: blocos ingress
+        # ficam indentados dentro do resource.
+        blocks: List[str] = []
+        for m in re.finditer(r"\bingress\s*\{", body):
+            depth, i = 1, m.end()
+            while i < len(body) and depth:
+                depth += {"{": 1, "}": -1}.get(body[i], 0)
+                i += 1
+            blocks.append(body[m.end():i - 1])
+        return blocks
 
     @staticmethod
     def _get_attr(body: str, attr: str) -> str | None:
@@ -390,12 +406,12 @@ class TerraformStaticAnalyzer:
 
         for b in policies:
             body = b["body"]
-            if '"Action"\s*:\s*"*"' in body or '"Action"\s*:\s*\[\s*"*"' in body:
+            if self._IAM_WILDCARD["Action"].search(body):
                 has_wildcard = True
                 self._add_finding("iam_wildcard_action", "HIGH", "IAM",
                                   "Policy '%s' usa wildcard (*) em Action" % b["name"],
                                   "Use acoes específicas (princípio do menor privilégio).")
-            if '"Resource"\s*:\s*"*"' in body or '"Resource"\s*:\s*\[\s*"*"' in body:
+            if self._IAM_WILDCARD["Resource"].search(body):
                 has_wildcard = True
                 self._add_finding("iam_wildcard_resource", "HIGH", "IAM",
                                   "Policy '%s' usa wildcard (*) em Resource" % b["name"],

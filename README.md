@@ -152,6 +152,14 @@ curl -X POST http://localhost:8000/api/audit \
   }'
 ```
 
+Depois da analise, o usuario pode fazer perguntas em linguagem simples (`POST /api/ask`). O servidor refaz a analise estatica do Terraform enviado, entao o modelo so responde com base no resultado real. Se o Bedrock falhar, a resposta sai do catalogo revisado do relatorio para o cliente. Perguntas repetidas sobre o mesmo Terraform saem de um cache e nao gastam cota.
+
+```bash
+curl -X POST http://localhost:8000/api/ask \
+  -H "Content-Type: application/json" \
+  -d '{"code_or_prompt": "<o mesmo Terraform>", "question": "O que devo resolver primeiro?", "history": []}'
+```
+
 ---
 
 ## Execucao dos Testes
@@ -168,9 +176,11 @@ pytest tests
 
 O teste roda localmente e nunca toca a AWS: Bedrock, S3, DynamoDB e CloudWatch viram simulacoes com latencia configuravel, e `run_load.py` se recusa a apontar para outro endereco que nao seja o local. Rodar contra producao gastaria a cota do Bedrock e dispararia alertas SNS.
 
-Use um ambiente com `requirements_minimal.txt` para reproduzir o servidor de producao. O cliente de carga precisa do `aiohttp`.
+O `server.py` esconde LangGraph e ChromaDB mesmo que estejam instalados, porque producao (`requirements_minimal.txt`) roda sem eles. O cliente de carga precisa do `aiohttp`.
 
 ```bash
 python tests/load/server.py --port 8099 --bedrock-latency 2 --aws-latency 0.03
-python tests/load/run_load.py --url http://127.0.0.1:8099 --requests 1000
+python tests/load/run_load.py --url http://127.0.0.1:8099 --requests 1000 --scenario audit   # ou ask, mixed
 ```
+
+`mixed` simula um pico real: 40% auditorias, 40% perguntas ao agente e 20% carregamentos da pagina.

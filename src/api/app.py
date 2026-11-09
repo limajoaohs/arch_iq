@@ -1,14 +1,14 @@
 import os
 import uuid
 import base64
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Literal
 import anyio
 import jwt
 from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from src.config import settings
 from src.aws.bedrock import BedrockService
@@ -18,6 +18,7 @@ from src.aws.cloudwatch import CloudWatchService
 from src.aws.textract import TextractService
 from src.rag.store import VectorStore
 from src.agents.graph import create_arch_iq_graph
+from src.agents.qa_agent import MAX_QUESTION_CHARS, QuestionAgent
 
 
 app = FastAPI(title="ArchIQ API", version="1.0.0")
@@ -26,6 +27,9 @@ app = FastAPI(title="ArchIQ API", version="1.0.0")
 # proprio para nao ocupar o pool padrao do FastAPI e travar o resto da API sob carga.
 AUDIT_MAX_THREADS = 40
 _audit_limiter = anyio.CapacityLimiter(AUDIT_MAX_THREADS)
+# Perguntas tem limitador separado e menor: uma rajada de chat nao pode atrasar as auditorias.
+ASK_MAX_THREADS = 20
+_ask_limiter = anyio.CapacityLimiter(ASK_MAX_THREADS)
 
 # CORS - liberar frontend (ajuste via variavel de ambiente CORS_ORIGINS)
 cors_origins = os.environ.get("CORS_ORIGINS", "*").split(",")
@@ -147,6 +151,22 @@ class TextractResponse(BaseModel):
     extracted_text: str
 
 
+class ChatTurn(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(..., max_length=4000)
+
+
+class AskRequest(BaseModel):
+    code_or_prompt: str = Field(..., max_length=200_000)
+    question: str = Field(..., max_length=MAX_QUESTION_CHARS)
+    history: List[ChatTurn] = Field(default_factory=list, max_length=20)
+
+
+class AskResponse(BaseModel):
+    answer: str
+    source: str  # "bedrock" ou "catalog" (resposta de reserva sem o modelo)
+
+
 # async de proposito: o /health nao pode esperar na fila de threads, ou a hospedagem
 # considera o servico morto e o reinicia justamente durante um pico de uso.
 @app.get("/health")
@@ -257,6 +277,23 @@ def _run_audit(code_or_prompt: str, session_id: str) -> AuditResponse:
         raise HTTPException(status_code=500, detail="Erro interno do servidor ao processar a solicitação.")
 
 
+@app.post("/api/ask", response_model=AskResponse)
+async def ask_question(request: AskRequest, user: Optional[Dict[str, Any]] = Depends(get_current_user)):
+    """Responde uma pergunta do usuario sobre a analise do Terraform enviado."""
+    if not request.code_or_prompt.strip() or not request.question.strip():
+        raise HTTPException(status_code=400, detail="code_or_prompt e question sao obrigatorios")
+
+    history = [turn.model_dump() for turn in request.history]
+    try:
+        result = await anyio.to_thread.run_sync(
+            question_agent.answer, request.code_or_prompt, request.question, history,
+            limiter=_ask_limiter,
+        )
+    except Exception:
+        raise HTTPException(status_code=500, detail="Erro interno ao responder a pergunta.")
+    return AskResponse(**result)
+
+
 @app.post("/api/extract-text", response_model=TextractResponse)
 async def extract_text(file: UploadFile = File(...), user: Optional[Dict[str, Any]] = Depends(get_current_user)):
     """Extrai texto de uma imagem ou PDF (diagrama de arquitetura) usando Amazon Textract."""
@@ -281,6 +318,7 @@ storage_service = StorageService()
 sns_service = SnsService()
 cloudwatch_service = CloudWatchService()
 textract_service = TextractService()
+question_agent = QuestionAgent(bedrock_service)
 
 data_path = os.path.join(os.path.dirname(__file__), "..", "..", "data", "well_architected.json")
 vector_store.seed_data(os.path.abspath(data_path))

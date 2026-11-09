@@ -64,6 +64,8 @@
     <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
     <symbol id="i-play" viewBox="0 0 24 24"><path d="M6 3l14 9-14 9z"/></symbol>
     <symbol id="i-retry" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="M14.54 21.69a.5.5 0 0 0 .94-.03l6.5-19a.5.5 0 0 0-.64-.64l-19 6.5a.5.5 0 0 0-.03.94l7.93 3.18a2 2 0 0 1 1.11 1.11z"/><path d="m21.85 2.15-10.94 10.94"/></symbol>
     <symbol id="i-bell" viewBox="0 0 24 24"><path d="M10.27 21a2 2 0 0 0 3.46 0"/><path d="M3.26 15.33A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.67C19.41 13.96 18 12.5 18 8A6 6 0 0 0 6 8c0 4.5-1.41 5.96-2.74 7.33"/></symbol>
   </svg>
 
@@ -362,6 +364,23 @@
           <div class="sheet prose" id="technicalReport"></div>
         </section>
       </div>
+
+      <!-- Agente de perguntas: responde sobre esta analise, em linguagem simples -->
+      <section class="block ask" id="secAsk" aria-labelledby="askTitle">
+        <div class="block-head">
+          <h3 id="askTitle"><svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg>Pergunte sobre a análise</h3>
+          <p class="block-meta">Responde em linguagem simples, só com base neste resultado.</p>
+        </div>
+        <div class="sheet ask-sheet">
+          <div class="ask-log" id="askLog" role="log" aria-live="polite" aria-label="Conversa"></div>
+          <div class="ask-suggestions" id="askSuggestions" role="group" aria-label="Sugestões de pergunta"></div>
+          <form class="ask-form" id="askForm">
+            <label class="visually-hidden" for="askInput">Sua pergunta</label>
+            <textarea id="askInput" rows="1" maxlength="500" placeholder="Ex.: o que pode acontecer se eu não resolver isso?" autocomplete="off"></textarea>
+            <button class="btn btn--primary" type="submit" id="askSend" aria-label="Perguntar"><svg class="icon" aria-hidden="true"><use href="#i-send"/></svg><span>Perguntar</span></button>
+          </form>
+        </div>
+      </section>
     </section>
 
     <p class="app-foot mono">ArchIQ · Terraform + Amazon Bedrock · AWS Well-Architected</p>

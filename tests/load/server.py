@@ -28,6 +28,12 @@ os.environ.update({
 })
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
+# Producao (requirements_minimal.txt) nao tem LangGraph nem ChromaDB e roda o FallbackWorkflow.
+# Esconde os dois mesmo que o venv local os tenha: com ChromaDB cada auditoria calcula
+# embeddings na CPU e o teste mede uma arquitetura que nao e a de producao.
+for _module in ("langgraph", "langgraph.graph", "chromadb", "chromadb.config"):
+    sys.modules[_module] = None
+
 import uvicorn  # noqa: E402
 
 from src.api.app import app  # noqa: E402
