@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR" data-type="software" data-radius="sharp" data-buttons="pill" data-motion>
+<html lang="pt-BR" data-type="software" data-radius="soft" data-buttons="pill" data-motion>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -67,6 +67,10 @@
     <symbol id="i-retry" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
     <symbol id="i-chat" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></symbol>
     <symbol id="i-send" viewBox="0 0 24 24"><path d="M14.54 21.69a.5.5 0 0 0 .94-.03l6.5-19a.5.5 0 0 0-.64-.64l-19 6.5a.5.5 0 0 0-.03.94l7.93 3.18a2 2 0 0 1 1.11 1.11z"/><path d="m21.85 2.15-10.94 10.94"/></symbol>
+    <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></symbol>
+    <symbol id="i-trend-up" viewBox="0 0 24 24"><path d="M16 7h6v6"/><path d="m22 7-8.5 8.5-5-5L2 17"/></symbol>
+    <symbol id="i-trend-down" viewBox="0 0 24 24"><path d="M16 17h6v-6"/><path d="m22 17-8.5-8.5-5 5L2 7"/></symbol>
     <symbol id="i-bell" viewBox="0 0 24 24"><path d="M10.27 21a2 2 0 0 0 3.46 0"/><path d="M3.26 15.33A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.67C19.41 13.96 18 12.5 18 8A6 6 0 0 0 6 8c0 4.5-1.41 5.96-2.74 7.33"/></symbol>
   </svg>
 
@@ -204,7 +208,7 @@
             <div class="faq__item"><h3>Quais arquivos posso enviar?</h3><p>Arquivos .tf e .json vão direto para o editor. Imagens e PDFs de diagramas passam pelo Amazon Textract.</p></div>
             <div class="faq__item"><h3>O relatório substitui uma revisão humana?</h3><p>Não. Ele lê a configuração enviada e não testa o sistema em funcionamento. A equipe técnica deve confirmar cada ponto.</p></div>
             <div class="faq__item"><h3>A nota muda se eu repetir a análise?</h3><p>Não. As regras dão sempre a mesma nota para o mesmo Terraform. Só o texto da resposta simplificada pode variar, porque é escrito por IA.</p></div>
-            <div class="faq__item"><h3>O que acontece com o resultado?</h3><p>O relatório técnico e o estado da análise ficam guardados na AWS do projeto. Não envie senhas no Terraform.</p></div>
+            <div class="faq__item"><h3>O que acontece com o resultado?</h3><p>Cada análise entra no seu histórico, visível só para a sua conta. Você reabre, compara a nota com as anteriores ou apaga quando quiser. Não envie senhas no Terraform.</p></div>
           </div>
         </div>
       </div>
@@ -230,6 +234,32 @@
   </footer>
 
   <div class="app" id="appMain" role="main" tabindex="-1" hidden>
+   <div class="app-shell">
+    <!-- Historico do usuario: ultimas analises, guardadas na API por conta -->
+    <aside class="history" id="historyPanel" aria-labelledby="histTitle">
+      <button class="history-toggle" type="button" id="historyToggle" aria-expanded="false" aria-controls="historyBody">
+        <svg class="icon" aria-hidden="true"><use href="#i-history"/></svg>
+        <span id="histTitle">Suas análises</span>
+        <span class="history-count mono" id="historyCount"></span>
+        <svg class="icon chev" aria-hidden="true"><use href="#i-chevron"/></svg>
+      </button>
+      <div class="history-body" id="historyBody">
+        <div class="history-trend" id="historyTrend" hidden>
+          <div class="history-trend__head">
+            <span>Evolução da nota</span>
+            <span class="mono" id="historyTrendMeta"></span>
+          </div>
+          <svg class="spark" id="historySpark" viewBox="0 0 240 64" preserveAspectRatio="none" role="img" aria-label="Notas das últimas análises"></svg>
+        </div>
+        <button class="history-new" type="button" id="historyNew">
+          <svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>Nova análise
+        </button>
+        <ol class="history-list" id="historyList" aria-label="Análises anteriores"></ol>
+        <p class="history-status" id="historyStatus" role="status"></p>
+      </div>
+    </aside>
+
+    <div class="app-main">
     <!-- Entrada -->
     <section class="workspace" id="workspace" aria-labelledby="wsTitle">
       <div class="app-head">
@@ -295,6 +325,7 @@
         <div class="score-copy">
           <p class="score-status" id="scoreStatus"></p>
           <p class="score-note" id="scoreNote"></p>
+          <p class="score-delta mono" id="scoreDelta" hidden></p>
           <div class="services mono" id="servicesList" aria-label="Serviços detectados"></div>
         </div>
         <dl class="stats">
@@ -385,6 +416,8 @@
     </section>
 
     <p class="app-foot mono">ArchIQ · Terraform + Amazon Bedrock · AWS Well-Architected</p>
+    </div>
+   </div>
   </div>
 
   <dialog class="diagram-dialog" id="diagramDialog" aria-labelledby="dlgTitle">

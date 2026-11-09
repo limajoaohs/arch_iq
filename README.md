@@ -31,6 +31,7 @@ O fluxo de execucao e organizado em modulos independentes:
    - S3: Armazenamento persistente de relatorios e auditorias exportadas.
    - DynamoDB: Armazenamento de checkpoints de estado das sessoes para permitir continuidade em conversas longas.
 7. **Amazon Cognito**: Autenticacao opcional. Quando `COGNITO_USER_POOL_ID` e `COGNITO_CLIENT_ID` estao definidos, a API exige um access token JWT (assinatura validada via JWKS) e a interface web faz login pelo Hosted UI com Authorization Code + PKCE.
+8. **Historico por usuario**: cada auditoria fica salva na mesma tabela DynamoDB, com chave `SessionId = HISTORY#<sub do Cognito>`. A API expoe `GET /api/history` (ultimas 50), `GET /api/history/{id}` (resultado completo + Terraform) e `DELETE /api/history/{id}`; um usuario nunca ve as analises de outro. Sem tabela configurada, o historico fica em memoria.
 
 ---
 

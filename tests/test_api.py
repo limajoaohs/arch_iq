@@ -33,6 +33,9 @@ def no_auth(monkeypatch):
     app_module = importlib.import_module("src.api.app")
     # Nao gastar a cota diaria do Bedrock nos testes
     monkeypatch.setattr(app_module.bedrock_service, "invoke", lambda *a, **k: "Explicacao simulada.")
+    # Historico em memoria: os testes nao gravam na tabela DynamoDB real do .env
+    from src.aws.history import HistoryService
+    monkeypatch.setattr(app_module, "history_service", HistoryService(table_name=""))
     app.dependency_overrides[get_current_user] = lambda: None
     yield
     app.dependency_overrides.clear()

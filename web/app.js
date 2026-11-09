@@ -116,6 +116,216 @@ resource "aws_iam_policy" "app" {
   let analyzedCode = '';
   let chat = [];        // historico enviado ao agente: [{ role, content }]
   let asking = false;
+  let historyItems = []; // resumos de GET /api/history, do mais novo para o mais antigo
+  let activeHistoryId = null;
+
+  /* ----------------------------------------------------------------------
+     Historico do usuario (GET/DELETE /api/history)
+     ---------------------------------------------------------------------- */
+  const HISTORY_ENDPOINT = cfg.historyEndpoint || '/api/history';
+  const bandOf = (score) => (score >= 75 ? 'good' : score >= 50 ? 'mid' : 'bad');
+
+  function formatWhen(iso) {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    const time = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const day = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+    const diff = Math.round((day(new Date()) - day(d)) / 86400000);
+    if (diff === 0) return `Hoje, ${time}`;
+    if (diff === 1) return `Ontem, ${time}`;
+    const date = d.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short',
+      ...(d.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}) });
+    return `${date.replace('.', '')}, ${time}`;
+  }
+
+  function setHistoryStatus(text, retry) {
+    const status = $('historyStatus');
+    status.replaceChildren(text);
+    if (retry) {
+      const b = h('button', 'link-btn', 'Tentar de novo');
+      b.type = 'button';
+      b.addEventListener('click', loadHistory);
+      status.append(' ', b);
+    }
+  }
+
+  async function loadHistory() {
+    setHistoryStatus('Carregando…');
+    try {
+      await Auth.ready;
+      const res = await fetch(api(HISTORY_ENDPOINT), { headers: { Accept: 'application/json', ...Auth.headers() } });
+      if (res.status === 401) {
+        historyItems = [];
+        renderHistory();
+        return setHistoryStatus('Entre na sua conta para ver o histórico.');
+      }
+      if (!res.ok) throw new Error(String(res.status));
+      historyItems = (await res.json()).items || [];
+      renderHistory();
+    } catch (_) {
+      setHistoryStatus('Não foi possível carregar o histórico.', true);
+    }
+  }
+
+  function renderHistory() {
+    const list = $('historyList');
+    $('historyCount').textContent = historyItems.length ? String(historyItems.length) : '';
+    setHistoryStatus(historyItems.length ? '' : 'Suas análises aparecem aqui assim que terminam.');
+    list.replaceChildren(...historyItems.map(historyItem));
+    renderTrend();
+  }
+
+  function historyItem(entry) {
+    const li = h('li', 'h-item' + (entry.id === activeHistoryId ? ' is-active' : ''));
+    li.dataset.id = entry.id;
+    li.style.setProperty('--h-color', `var(--score-${bandOf(entry.score)})`);
+
+    const open = h('button', 'h-open');
+    open.type = 'button';
+    if (entry.id === activeHistoryId) open.setAttribute('aria-current', 'true');
+    const ring = h('span', 'h-ring mono', String(entry.score));
+    ring.style.setProperty('--p', entry.score);
+    ring.setAttribute('aria-label', `Nota ${entry.score}`);
+    const text = h('span', 'h-text');
+    const meta = [formatWhen(entry.created_at)];
+    meta.push(entry.findings === 1 ? '1 risco' : `${entry.findings} riscos`);
+    text.append(h('span', 'h-name', entry.source_name || 'main.tf'), h('span', 'h-meta', meta.join(' · ')));
+    open.append(ring, text);
+    open.addEventListener('click', () => openHistory(entry.id, li));
+
+    // Apagar pede um segundo clique (sem confirm() do navegador)
+    const del = h('button', 'h-del');
+    del.type = 'button';
+    del.setAttribute('aria-label', `Apagar análise de ${entry.source_name}`);
+    del.appendChild(icon('i-trash'));
+    let armTimer = null;
+    del.addEventListener('click', () => {
+      if (!del.classList.contains('is-armed')) {
+        del.classList.add('is-armed');
+        del.append(h('span', null, 'Apagar?'));
+        armTimer = setTimeout(() => { del.classList.remove('is-armed'); del.lastChild.remove(); }, 3000);
+        return;
+      }
+      clearTimeout(armTimer);
+      deleteHistory(entry.id, li);
+    });
+
+    li.append(open, del);
+    return li;
+  }
+
+  function renderTrend() {
+    const box = $('historyTrend');
+    const points = historyItems.slice(0, 12).reverse();
+    box.hidden = points.length < 2;
+    if (box.hidden) return;
+    const W = 240, H = 64, pad = 6;
+    const x = (i) => pad + (i * (W - 2 * pad)) / (points.length - 1);
+    const y = (score) => H - pad - (score / 100) * (H - 2 * pad);
+    const coords = points.map((p, i) => `${x(i).toFixed(1)},${y(p.score).toFixed(1)}`);
+    const ns = 'http://www.w3.org/2000/svg';
+    const el = (tag, attrs) => {
+      const node = document.createElementNS(ns, tag);
+      Object.entries(attrs).forEach(([k, v]) => node.setAttribute(k, v));
+      return node;
+    };
+    $('historySpark').replaceChildren(
+      el('line', { class: 'spark-limit', x1: 0, x2: W, y1: y(75), y2: y(75) }),
+      el('polygon', { class: 'spark-area', points: `${x(0)},${H} ${coords.join(' ')} ${x(points.length - 1)},${H}` }),
+      el('polyline', { class: 'spark-line', points: coords.join(' ') }),
+      ...points.map((p, i) => el('circle', { class: `spark-dot is-${bandOf(p.score)}`, cx: x(i), cy: y(p.score), r: 2.6 })),
+    );
+    const avg = Math.round(points.reduce((sum, p) => sum + p.score, 0) / points.length);
+    $('historyTrendMeta').textContent = `média ${avg} · última ${points[points.length - 1].score}`;
+  }
+
+  function markActive(id) {
+    activeHistoryId = id;
+    $('historyList').querySelectorAll('.h-item').forEach((li) => {
+      const on = li.dataset.id === id;
+      li.classList.toggle('is-active', on);
+      const btn = li.querySelector('.h-open');
+      if (on) btn.setAttribute('aria-current', 'true'); else btn.removeAttribute('aria-current');
+    });
+  }
+
+  async function openHistory(id, li) {
+    if (busy) return;
+    li.classList.add('is-loading');
+    try {
+      await Auth.ready;
+      const res = await fetch(api(`${HISTORY_ENDPOINT}/${encodeURIComponent(id)}`), {
+        headers: { Accept: 'application/json', ...Auth.headers() },
+      });
+      if (res.status === 401) return showSessionExpired();
+      if (res.status === 404) {
+        historyItems = historyItems.filter((item) => item.id !== id);
+        renderHistory();
+        return setHistoryStatus('Essa análise não existe mais.');
+      }
+      if (!res.ok) throw new Error(String(res.status));
+      const detail = await res.json();
+      els.statusPanel.hidden = true;
+      if (detail.code) setCode(detail.code, detail.summary.source_name);
+      analyzedCode = detail.code || '';
+      renderResults(detail.result, { createdAt: detail.summary.created_at });
+      closeHistoryOnMobile();
+    } catch (_) {
+      setHistoryStatus('Não foi possível abrir essa análise.');
+    } finally {
+      li.classList.remove('is-loading');
+    }
+  }
+
+  async function deleteHistory(id, li) {
+    li.classList.add('is-loading');
+    try {
+      await Auth.ready;
+      const res = await fetch(api(`${HISTORY_ENDPOINT}/${encodeURIComponent(id)}`), {
+        method: 'DELETE', headers: Auth.headers(),
+      });
+      if (res.status === 401) return showSessionExpired();
+      if (!res.ok && res.status !== 404) throw new Error(String(res.status));
+      historyItems = historyItems.filter((item) => item.id !== id);
+      if (activeHistoryId === id) activeHistoryId = null;
+      li.classList.add('is-leaving');
+      setTimeout(renderHistory, reduceMotion ? 0 : 220);
+    } catch (_) {
+      li.classList.remove('is-loading');
+      setHistoryStatus('Não foi possível apagar. Tente de novo.');
+    }
+  }
+
+  // Compara com a analise anterior do mesmo arquivo
+  function renderDelta(r, createdAt) {
+    const box = $('scoreDelta');
+    const idx = historyItems.findIndex((item) => item.id === r.history_id);
+    const older = idx >= 0 ? historyItems.slice(idx + 1) : historyItems.filter((item) => item.created_at < createdAt);
+    const name = idx >= 0 ? historyItems[idx].source_name : els.editorTab.textContent;
+    const prev = older.find((item) => item.source_name === name);
+    if (!prev) { box.hidden = true; return; }
+    const diff = (Number(r.score) || 0) - prev.score;
+    const when = formatWhen(prev.created_at).toLowerCase();
+    box.replaceChildren();
+    box.className = 'score-delta mono ' + (diff > 0 ? 'is-up' : diff < 0 ? 'is-down' : 'is-flat');
+    if (diff !== 0) box.appendChild(icon(diff > 0 ? 'i-trend-up' : 'i-trend-down'));
+    const pts = Math.abs(diff) === 1 ? 'ponto' : 'pontos';
+    box.append(diff === 0
+      ? `mesma nota da análise de ${when}`
+      : `${diff > 0 ? '+' : '−'}${Math.abs(diff)} ${pts} desde a análise de ${when}`);
+    box.hidden = false;
+  }
+
+  function toggleHistory(force) {
+    const panel = $('historyPanel');
+    const open = force ?? !panel.classList.contains('is-open');
+    panel.classList.toggle('is-open', open);
+    $('historyToggle').setAttribute('aria-expanded', String(open));
+  }
+
+  function closeHistoryOnMobile() {
+    if (window.matchMedia('(max-width: 1023px)').matches) toggleHistory(false);
+  }
 
   /* ----------------------------------------------------------------------
      Agente de perguntas (POST /api/ask)
@@ -260,6 +470,7 @@ resource "aws_iam_policy" "app" {
     els.landingFooter.hidden = true;
     els.app.hidden = false;
     window.scrollTo(0, 0);
+    loadHistory();
   }
 
   // Sem login configurado, o botao abre o aplicativo direto
@@ -316,6 +527,17 @@ resource "aws_iam_policy" "app" {
     $('askInput').addEventListener('input', (e) => {
       e.target.style.height = 'auto';
       e.target.style.height = Math.min(e.target.scrollHeight, 160) + 'px';
+    });
+
+    $('historyToggle').addEventListener('click', () => toggleHistory());
+    $('historyNew').addEventListener('click', () => {
+      markActive(null);
+      setCode('', 'main.tf');
+      els.results.hidden = true;
+      els.statusPanel.hidden = true;
+      closeHistoryOnMobile();
+      els.workspace.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
+      els.editor.focus({ preventScroll: true });
     });
 
     $('expandDiagram').addEventListener('click', openDiagram);
@@ -438,7 +660,7 @@ resource "aws_iam_policy" "app" {
       const res = await fetch(api(cfg.auditEndpoint || '/api/audit'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...Auth.headers() },
-        body: JSON.stringify({ code_or_prompt: code }),
+        body: JSON.stringify({ code_or_prompt: code, source_name: els.editorTab.textContent.trim().slice(0, 120) }),
       });
 
       if (res.status === 401) return showSessionExpired();
@@ -455,6 +677,7 @@ resource "aws_iam_policy" "app" {
       await finishPipeline();
       els.statusPanel.hidden = true;
       analyzedCode = code; // o agente de perguntas responde sobre exatamente este codigo
+      if (result.history_id) await loadHistory(); // traz a nova entrada para comparar com a anterior
       renderResults(result);
     } catch (_) {
       showNotice('error', 'i-offline', 'Sem conexão com a API',
@@ -560,8 +783,10 @@ resource "aws_iam_policy" "app" {
   /* ----------------------------------------------------------------------
      Resultado
      ---------------------------------------------------------------------- */
-  function renderResults(r) {
+  function renderResults(r, opts = {}) {
     lastResult = r;
+    markActive(r.history_id || null);
+    const createdAt = opts.createdAt || new Date().toISOString();
     const summary = r.executive_summary || {};
     const score = Math.max(0, Math.min(100, Number(r.score) || 0));
     const findings = (r.security_audit && r.security_audit.findings) || [];
@@ -570,8 +795,8 @@ resource "aws_iam_policy" "app" {
     const opportunities = optimizations.filter((o) => o.status !== 'in_use').length;
     const services = (r.parsed_services || []).filter((s) => s !== 'GENERAL_AWS');
 
-    const time = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    $('resSession').textContent = `Sessão ${String(r.session_id || '').slice(0, 8)} · ${time}`;
+    $('resSession').textContent = `Sessão ${String(r.session_id || '').slice(0, 8)} · ${formatWhen(createdAt)}`;
+    $('resTitle').textContent = opts.createdAt ? 'Análise do histórico' : 'Resultado da auditoria';
 
     // Score
     const band = score >= 75 ? 'good' : score >= 50 ? 'mid' : 'bad';
@@ -590,6 +815,7 @@ resource "aws_iam_policy" "app" {
       pill.append(icon('i-bell'), 'alerta enviado via SNS');
       note.after(pill);
     }
+    renderDelta(r, createdAt);
     $('statServices').textContent = services.length;
     $('statFindings').textContent = findings.length;
     $('statSavings').textContent = opportunities;
@@ -598,14 +824,19 @@ resource "aws_iam_policy" "app" {
     renderMarkdown($('layperson'), r.layperson_explanation
       || 'A explicação em linguagem simples não foi gerada nesta análise. O relatório técnico abaixo traz todos os detalhes.');
     $('servicesList').replaceChildren(...services.map((s) => h('span', null, s)));
-    renderClientReport(r.client_report);
+    renderClientReport(r.client_report, createdAt);
     resetChat(r);
+    // Analise antiga sem o Terraform guardado (arquivo grande demais): o agente nao tem o que ler
+    $('secAsk').hidden = !analyzedCode;
     renderMarkdown($('technicalReport'), r.technical_report || r.final_report || '');
 
     renderFindings(findings);
     renderSavings(optimizations, savings);
 
     els.results.hidden = false;
+    els.results.classList.remove('is-entering');
+    void els.results.offsetWidth; // reinicia a animacao de entrada
+    els.results.classList.add('is-entering');
     diagramPending = true; // o Mermaid precisa da aba visivel para medir o desenho
     selectTab('simple', false);
     animateGauge(score);
@@ -665,7 +896,7 @@ resource "aws_iam_policy" "app" {
     return article;
   }
 
-  function renderClientReport(report) {
+  function renderClientReport(report, createdAt) {
     const doc = $('clientDoc');
     document.querySelector('.client-actions').hidden = !report;
 
@@ -678,7 +909,7 @@ resource "aws_iam_policy" "app" {
     }
 
     const lede = h('header', 'client-lede');
-    const when = new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
+    const when = new Date(createdAt || Date.now()).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
     lede.append(
       h('p', 'client-kicker', `Resultado da análise do seu ambiente na nuvem · ${when}`),
       h('p', `client-verdict is-${report.tone}`, report.headline),

@@ -40,6 +40,7 @@ from src.api.app import app  # noqa: E402
 from src.aws.bedrock import BedrockService  # noqa: E402
 from src.aws.cloudwatch import CloudWatchService  # noqa: E402
 from src.aws.storage import StorageService  # noqa: E402
+from src.aws.history import HistoryService  # noqa: E402
 
 counts = {"bedrock": 0, "s3": 0, "dynamodb": 0, "cloudwatch": 0, "in_flight_bedrock_peak": 0}
 _lock = threading.Lock()
@@ -69,6 +70,7 @@ def install_fakes(bedrock_latency: float, aws_latency: float) -> None:
     BedrockService.invoke = fake_invoke
     StorageService.save_report = fake_aws("s3", "reports/load-test.md")
     StorageService.record_checkpoint = fake_aws("dynamodb", True)
+    HistoryService.save = fake_aws("dynamodb", "20260101T000000Z_000000000000")
     CloudWatchService.put_audit_metric = fake_aws("cloudwatch", True)
 
 

@@ -16,6 +16,7 @@ from src.aws.storage import StorageService
 from src.aws.sns import SnsService
 from src.aws.cloudwatch import CloudWatchService
 from src.aws.textract import TextractService
+from src.aws.history import HistoryService, ANONYMOUS
 from src.rag.store import VectorStore
 from src.agents.graph import create_arch_iq_graph
 from src.agents.qa_agent import MAX_QUESTION_CHARS, QuestionAgent
@@ -77,6 +78,7 @@ def get_current_user(authorization: Optional[str] = Header(None)) -> Optional[Di
 class AuditRequest(BaseModel):
     code_or_prompt: str
     session_id: Optional[str] = None
+    source_name: Optional[str] = Field(None, max_length=120)  # nome do arquivo, mostrado no historico
 
 
 class SecurityFinding(BaseModel):
@@ -145,6 +147,29 @@ class AuditResponse(BaseModel):
     report_location: Optional[str] = None
     alert_sent: bool = False
     executive_summary: ExecutiveSummary
+    history_id: Optional[str] = None  # None quando a analise nao entrou no historico
+
+
+class HistoryEntry(BaseModel):
+    id: str
+    created_at: str
+    score: int
+    score_status: str
+    services: List[str]
+    findings: int
+    optimizations: int
+    source_name: str
+    headline: str
+
+
+class HistoryList(BaseModel):
+    items: List[HistoryEntry]
+
+
+class HistoryDetail(BaseModel):
+    summary: HistoryEntry
+    code: str
+    result: AuditResponse
 
 
 class TextractResponse(BaseModel):
@@ -187,9 +212,55 @@ async def audit_architecture(request: AuditRequest, user: Optional[Dict[str, Any
         raise HTTPException(status_code=400, detail="code_or_prompt cannot be empty")
 
     session_id = request.session_id or str(uuid.uuid4())
-    return await anyio.to_thread.run_sync(
+    result = await anyio.to_thread.run_sync(
         _run_audit, request.code_or_prompt, session_id, limiter=_audit_limiter
     )
+    # Historico e um extra: se a gravacao falhar, o usuario ainda recebe a analise
+    try:
+        result.history_id = await anyio.to_thread.run_sync(
+            history_service.save, _user_id(user), result.model_dump(exclude={"history_id"}),
+            request.code_or_prompt, (request.source_name or "").strip(), limiter=_audit_limiter,
+        )
+    except Exception:
+        result.history_id = None
+    return result
+
+
+def _user_id(user: Optional[Dict[str, Any]]) -> str:
+    """Dono do historico: o sub do Cognito, ou um usuario local quando o login esta desativado."""
+    return str(user["sub"]) if user and user.get("sub") else ANONYMOUS
+
+
+@app.get("/api/history", response_model=HistoryList)
+async def list_history(user: Optional[Dict[str, Any]] = Depends(get_current_user)):
+    """Ultimas analises do usuario logado, da mais nova para a mais antiga."""
+    try:
+        items = await anyio.to_thread.run_sync(history_service.list, _user_id(user), limiter=_ask_limiter)
+    except Exception:
+        raise HTTPException(status_code=503, detail="Historico indisponivel no momento.")
+    return HistoryList(items=items)
+
+
+@app.get("/api/history/{entry_id}", response_model=HistoryDetail)
+async def get_history(entry_id: str, user: Optional[Dict[str, Any]] = Depends(get_current_user)):
+    try:
+        entry = await anyio.to_thread.run_sync(history_service.get, _user_id(user), entry_id, limiter=_ask_limiter)
+    except Exception:
+        raise HTTPException(status_code=503, detail="Historico indisponivel no momento.")
+    if not entry:
+        raise HTTPException(status_code=404, detail="Analise nao encontrada.")
+    entry["result"]["history_id"] = entry_id
+    return HistoryDetail(**entry)
+
+
+@app.delete("/api/history/{entry_id}", status_code=204)
+async def delete_history(entry_id: str, user: Optional[Dict[str, Any]] = Depends(get_current_user)):
+    try:
+        deleted = await anyio.to_thread.run_sync(history_service.delete, _user_id(user), entry_id, limiter=_ask_limiter)
+    except Exception:
+        raise HTTPException(status_code=503, detail="Historico indisponivel no momento.")
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Analise nao encontrada.")
 
 
 def _run_audit(code_or_prompt: str, session_id: str) -> AuditResponse:
@@ -318,6 +389,7 @@ storage_service = StorageService()
 sns_service = SnsService()
 cloudwatch_service = CloudWatchService()
 textract_service = TextractService()
+history_service = HistoryService()
 question_agent = QuestionAgent(bedrock_service)
 
 data_path = os.path.join(os.path.dirname(__file__), "..", "..", "data", "well_architected.json")
