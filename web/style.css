@@ -136,6 +136,9 @@ body.is-app [data-start] { display: none; }
   .ly-collage .pc-score { padding: 14px; }
   .pc-gauge { width: 56px; height: 56px; margin-bottom: 4px; } .pc-gauge b { font-size: 20px; } .pc-gauge small { display: none; }
   .pc-score__t { font-size: 17px; } .pc-score__s { display: none; }
+  /* no celular a colagem fica no primeiro conjunto: os outros nao cabem em 342px */
+  .ly-collage > :nth-child(1 of .ly-collage__set) { opacity: 1 !important; pointer-events: auto; }
+  .ly-collage > .ly-collage__set:not(:nth-child(1 of .ly-collage__set)), .ly-collage > button.loop-pause { display: none; }
 }
 
 /* Frase: a faixa branca da pagina (30%), o titulo responde ao ponteiro */
@@ -606,7 +609,9 @@ button.link { justify-self: start; background: none; border: 0; padding: 0; font
   .score-panel { grid-template-columns: minmax(0, 1fr); justify-items: center; text-align: center; }
   .score-copy { justify-items: center; }
   .services { justify-content: center; }
-  .stats { width: 100%; }
+  .stats { width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-3); }
+  .stats > div { padding: var(--s-3) 4px; min-width: 0; }
+  .stats dt { font-size: 12px; hyphens: auto; }
   .tabs { grid-template-columns: minmax(0, 1fr); }
   .tab small { display: none; }
   .client-doc { padding: var(--s-5); gap: var(--s-6); }
