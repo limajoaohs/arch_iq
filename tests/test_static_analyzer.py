@@ -107,3 +107,63 @@ resource "aws_instance" "app" {
 }
 '''
     assert _savings(tf) == 12
+
+
+# Falsos positivos encontrados em 2026-11-11 (teste no site publicado)
+S3_ENCRYPTED_V4 = '''
+resource "aws_s3_bucket" "logs" {
+  bucket = "logs"
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "logs" {
+  bucket = aws_s3_bucket.logs.id
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "aws:kms"
+    }
+  }
+}
+'''
+
+
+def test_s3_encryption_resource_v4_is_accepted():
+    assert "s3_unencrypted" not in _codes(S3_ENCRYPTED_V4)
+
+
+def test_s3_inline_encryption_v3_is_accepted():
+    tf = '''
+resource "aws_s3_bucket" "logs" {
+  bucket = "logs"
+  server_side_encryption_configuration {
+    rule {
+      apply_server_side_encryption_by_default {
+        sse_algorithm = "AES256"
+      }
+    }
+  }
+}
+'''
+    assert "s3_unencrypted" not in _codes(tf)
+
+
+def test_s3_without_encryption_is_still_flagged():
+    assert "s3_unencrypted" in _codes(S3_ENCRYPTED_V4.split("resource \"aws_s3_bucket_server")[0])
+
+
+RDS = '''
+resource "aws_db_instance" "app" {
+  engine                  = "postgres"
+  storage_encrypted       = true
+  publicly_accessible     = false
+  multi_az                = %s
+  backup_retention_period = 7
+}
+'''
+
+
+def test_rds_multi_az_true_is_not_single_az():
+    assert not {"rds_single_az", "rds_no_multi_az"} & _codes(RDS % "true")
+
+
+def test_rds_multi_az_false_is_still_flagged():
+    assert {"rds_single_az", "rds_no_multi_az"} <= _codes(RDS % "false")

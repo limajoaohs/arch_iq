@@ -268,7 +268,9 @@ class TerraformStaticAnalyzer:
         max_points = self.WEIGHT_S3
         points_per_bucket = max_points / len(s3_buckets)
         has_public_access_block = self._has_resource_type(text, "aws_s3_bucket_public_access_block")
-        has_encryption = self._has_resource_type(text, "aws_s3_bucket_encryption")
+        # provider 3: bloco dentro do bucket ou aws_s3_bucket_encryption; provider 4+: recurso proprio
+        has_encryption_resource = (self._has_resource_type(text, "aws_s3_bucket_encryption")
+                                   or self._has_resource_type(text, "aws_s3_bucket_server_side_encryption_configuration"))
 
         for b in s3_buckets:
             body = b["body"]
@@ -281,11 +283,11 @@ class TerraformStaticAnalyzer:
                                   "Bucket '%s' tem ACL publica (%s)" % (b["name"], acl),
                                   "Defina acl = 'private'.")
 
-            if not has_encryption:
+            if not (has_encryption_resource or "server_side_encryption_configuration" in body):
                 bucket_ok = False
                 self._add_finding("s3_unencrypted", "HIGH", "S3",
                                   "Bucket '%s' nao possui criptografia at rest" % b["name"],
-                                  "Adicione aws_s3_bucket_encryption.")
+                                  "Adicione aws_s3_bucket_server_side_encryption_configuration.")
 
             if bucket_ok:
                 self._add_points("S3", int(points_per_bucket))
@@ -465,13 +467,16 @@ class TerraformStaticAnalyzer:
             if az:
                 azs.add(az)
 
-        has_rds = self._has_resource_type(text, "aws_db_instance")
+        rds_instances = [b for b in blocks if b["type"] == "aws_db_instance"]
+        has_rds = bool(rds_instances)
+        # Com multi_az = true a propria AWS mantem a replica em outra AZ, sem subnets declaradas
+        rds_multi_az = has_rds and all(self._get_bool(b["body"], "multi_az") is True for b in rds_instances)
         has_alb = self._has_resource_type(text, "aws_lb") or self._has_resource_type(text, "aws_elb")
 
         if has_rds and len(azs) >= 2:
             # Bonus pequeno por HA de rede com RDS
             self._add_points("RDS", 2)  # pontos extras ja contados acima
-        elif has_rds and len(azs) < 2:
+        elif has_rds and len(azs) < 2 and not rds_multi_az:
             self._add_finding("rds_single_az", "MEDIUM", "RDS",
                               "RDS em apenas uma AZ",
                               "Use subnets em duas ou mais AZs com Multi-AZ.")
