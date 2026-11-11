@@ -82,7 +82,6 @@
         <div class="nav__item"><a class="nav__link" href="#respostas">Respostas</a></div>
         <div class="nav__item"><a class="nav__link" href="#cliente">Cliente</a></div>
         <div class="nav__item"><a class="nav__link" href="#regras">Regras</a></div>
-        <div class="nav__item"><a class="nav__link" href="#perguntas">Perguntas</a></div>
       </nav>
       <div class="nav__actions">
         <span class="app-user" id="regionTag" hidden></span>
@@ -196,37 +195,13 @@
       </div>
     </section>
 
-    <section class="section ground-inverse" id="perguntas">
-      <div class="wrap">
-        <div class="grid">
-          <div class="span-6">
-            <h2>Perguntas sobre a análise</h2>
-            <p class="t-lead faq-lead">O que você precisa saber antes de enviar o primeiro arquivo.</p>
-          </div>
-          <div class="faq span-6 start-7">
-            <div class="faq__item"><h3>O ArchIQ precisa acessar minha conta AWS?</h3><p>Não. Ele lê apenas o texto que você cola ou o arquivo que envia.</p></div>
-            <div class="faq__item"><h3>Quais arquivos posso enviar?</h3><p>Arquivos .tf e .json vão direto para o editor. Imagens e PDFs de diagramas passam pelo Amazon Textract.</p></div>
-            <div class="faq__item"><h3>O relatório substitui uma revisão humana?</h3><p>Não. Ele lê a configuração enviada e não testa o sistema em funcionamento. A equipe técnica deve confirmar cada ponto.</p></div>
-            <div class="faq__item"><h3>A nota muda se eu repetir a análise?</h3><p>Não. As regras dão sempre a mesma nota para o mesmo Terraform. Só o texto da resposta simplificada pode variar, porque é escrito por IA.</p></div>
-            <div class="faq__item"><h3>O que acontece com o resultado?</h3><p>Cada análise entra no seu histórico, visível só para a sua conta. Você reabre, compara a nota com as anteriores ou apaga quando quiser. Não envie senhas no Terraform.</p></div>
-          </div>
-        </div>
-      </div>
-    </section>
   </main>
 
-  <footer class="footer closing footer--dark ground-inverse" id="contact" aria-labelledby="close-h">
+  <footer class="footer footer--dark ground-inverse" id="contact">
     <div class="wrap">
-      <div class="closing__cta close--word">
-        <div class="section-head--split">
-          <div><h2 id="close-h">Audite sua arquitetura AWS</h2><p class="t-lead">Cadastro aberto, com login pelo Amazon Cognito.</p></div>
-          <button class="btn btn--primary" type="button" data-start>Começar análise<svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg></button>
-        </div>
-        <p class="close__word" aria-hidden="true">ArchIQ</p>
-      </div>
       <div class="closing__links">
         <div class="footer__legal">
-          <span>&copy; 2026 ArchIQ &nbsp; <a href="#respostas">Respostas</a> &nbsp; <a href="#cliente">Cliente</a> &nbsp; <a href="#regras">Regras</a> &nbsp; <a href="#perguntas">Perguntas</a></span>
+          <span>&copy; 2026 ArchIQ &nbsp; <a href="#respostas">Respostas</a> &nbsp; <a href="#cliente">Cliente</a> &nbsp; <a href="#regras">Regras</a></span>
           <span class="muted">Terraform, Amazon Bedrock e AWS Well-Architected</span>
         </div>
       </div>
