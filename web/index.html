@@ -130,7 +130,7 @@
               <pre><i>18</i>  ingress {
 <i>19</i>    from_port   = 22
 <i>20</i>    protocol    = "tcp"
-<i>21</i>    <mark>cidr_blocks = ["0.0.0.0/0"]</mark>
+<i>21</i>    <mark>cidr_blocks = <span>[</span>"0.0.0.0/0"<span>]</span></mark>
 <i>22</i>  }
 <i>23</i>
 <i>24</i>resource "aws_db_instance" "main" {
