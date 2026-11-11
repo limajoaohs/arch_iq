@@ -1,0 +1,2 @@
+# scripts de shell sempre com LF: com CRLF o bash falha no Windows e no Lambda
+*.sh text eol=lf
