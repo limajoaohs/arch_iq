@@ -283,12 +283,14 @@ Escreva em portugues do Brasil, seguindo estas regras:
                 max_tokens=1000,
                 temperature=0.3,
             )
+            source = "bedrock"
         except Exception:
             explanation = self._fallback_layperson_explanation(
                 score, services, findings_str, opt_str, savings_pct
             )
+            source = "fallback"
 
-        return {"layperson_explanation": explanation}
+        return {"layperson_explanation": explanation, "layperson_source": source}
 
     def build_client_report(self, state: ArchIQState) -> Dict[str, Any]:
         """Monta o relatorio para o cliente a partir das regras, sem usar o Bedrock."""

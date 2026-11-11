@@ -17,6 +17,7 @@ from src.aws.sns import SnsService
 from src.aws.cloudwatch import CloudWatchService
 from src.aws.textract import TextractService
 from src.aws.history import HistoryService, ANONYMOUS
+from src.aws.cache import ResultCache
 from src.rag.store import VectorStore
 from src.agents.graph import create_arch_iq_graph
 from src.agents.qa_agent import MAX_QUESTION_CHARS, QuestionAgent
@@ -148,6 +149,7 @@ class AuditResponse(BaseModel):
     alert_sent: bool = False
     executive_summary: ExecutiveSummary
     history_id: Optional[str] = None  # None quando a analise nao entrou no historico
+    cached: bool = False  # True quando o mesmo Terraform ja foi analisado e o resultado veio do cache
 
 
 class HistoryEntry(BaseModel):
@@ -269,6 +271,12 @@ def _run_audit(code_or_prompt: str, session_id: str) -> AuditResponse:
         "raw_input": code_or_prompt
     }
 
+    # Mesmo Terraform, mesmo resultado: o cache poupa o Bedrock, o S3, o SNS e as metricas
+    cached = result_cache.get(code_or_prompt)
+    if cached:
+        return AuditResponse(**{**cached, "session_id": session_id, "report_location": None,
+                                "alert_sent": False, "cached": True})
+
     try:
         final_state = graph.invoke(initial_state)
         storage_service.record_checkpoint(session_id, final_state)
@@ -328,7 +336,7 @@ def _run_audit(code_or_prompt: str, session_id: str) -> AuditResponse:
             top_optimizations=top_optimizations
         )
 
-        return AuditResponse(
+        response = AuditResponse(
             session_id=session_id,
             score=score,
             parsed_services=final_state.get("parsed_services", []),
@@ -343,6 +351,11 @@ def _run_audit(code_or_prompt: str, session_id: str) -> AuditResponse:
             alert_sent=final_state.get("alert_sent", False),
             executive_summary=executive_summary
         )
+        # Texto de reserva (Bedrock fora do ar ou sem cota) nao entra no cache: a proxima analise tenta de novo
+        if final_state.get("layperson_source") == "bedrock":
+            result_cache.put(code_or_prompt, response.model_dump(
+                exclude={"session_id", "report_location", "alert_sent", "history_id", "cached"}))
+        return response
     except Exception as e:
         # Não expor stack traces nem detalhes internos ao cliente
         raise HTTPException(status_code=500, detail="Erro interno do servidor ao processar a solicitação.")
@@ -390,6 +403,7 @@ sns_service = SnsService()
 cloudwatch_service = CloudWatchService()
 textract_service = TextractService()
 history_service = HistoryService()
+result_cache = ResultCache()
 question_agent = QuestionAgent(bedrock_service)
 
 data_path = os.path.join(os.path.dirname(__file__), "..", "..", "data", "well_architected.json")

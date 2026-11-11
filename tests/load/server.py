@@ -41,13 +41,14 @@ from src.aws.bedrock import BedrockService  # noqa: E402
 from src.aws.cloudwatch import CloudWatchService  # noqa: E402
 from src.aws.storage import StorageService  # noqa: E402
 from src.aws.history import HistoryService  # noqa: E402
+from src.aws.cache import ResultCache  # noqa: E402
 
 counts = {"bedrock": 0, "s3": 0, "dynamodb": 0, "cloudwatch": 0, "in_flight_bedrock_peak": 0}
 _lock = threading.Lock()
 _in_flight = 0
 
 
-def install_fakes(bedrock_latency: float, aws_latency: float) -> None:
+def install_fakes(bedrock_latency: float, aws_latency: float, use_cache: bool = False) -> None:
     def fake_invoke(self, *args, **kwargs):
         global _in_flight
         with _lock:
@@ -72,6 +73,9 @@ def install_fakes(bedrock_latency: float, aws_latency: float) -> None:
     StorageService.record_checkpoint = fake_aws("dynamodb", True)
     HistoryService.save = fake_aws("dynamodb", "20260101T000000Z_000000000000")
     CloudWatchService.put_audit_metric = fake_aws("cloudwatch", True)
+    # O teste repete o mesmo Terraform: com o cache ligado mediria so acertos de cache
+    if not use_cache:
+        ResultCache.get = lambda self, code: None
 
 
 def load_counts():
@@ -88,8 +92,9 @@ if __name__ == "__main__":
     parser.add_argument("--port", type=int, default=8099)
     parser.add_argument("--bedrock-latency", type=float, default=2.0)
     parser.add_argument("--aws-latency", type=float, default=0.03)
+    parser.add_argument("--cache", action="store_true", help="liga o cache de auditorias (desligado por padrao)")
     options = parser.parse_args()
 
-    install_fakes(options.bedrock_latency, options.aws_latency)
+    install_fakes(options.bedrock_latency, options.aws_latency, options.cache)
     # Mesmo modo do Dockerfile: um unico processo uvicorn
     uvicorn.run(app, host="127.0.0.1", port=options.port, log_level="warning")

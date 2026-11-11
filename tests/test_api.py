@@ -231,3 +231,47 @@ def test_health_and_audit_do_not_wait_in_the_default_thread_pool():
     app_module = importlib.import_module("src.api.app")
     assert inspect.iscoroutinefunction(app_module.health)
     assert inspect.iscoroutinefunction(app_module.audit_architecture)
+
+
+# ---------------------------------------------------------------------------
+# Cache: o mesmo Terraform nao roda o grafo (nem chama o Bedrock) duas vezes
+# ---------------------------------------------------------------------------
+CACHE_TF = 'resource "aws_s3_bucket" "b" {\n  bucket = "cache-test"\n}\n'
+
+
+def _count_graph_runs(monkeypatch):
+    import importlib
+    app_module = importlib.import_module("src.api.app")
+    real = app_module.graph.invoke
+    calls = []
+
+    def counting(state):
+        calls.append(1)
+        return real(state)
+    monkeypatch.setattr(app_module.graph, "invoke", counting)
+    return calls
+
+
+def test_same_terraform_is_served_from_cache(monkeypatch):
+    calls = _count_graph_runs(monkeypatch)
+    first = client.post("/api/audit", json={"code_or_prompt": CACHE_TF}).json()
+    second = client.post("/api/audit", json={"code_or_prompt": CACHE_TF}).json()
+    assert len(calls) == 1
+    assert first["cached"] is False and second["cached"] is True
+    assert second["score"] == first["score"]
+    assert second["layperson_explanation"] == first["layperson_explanation"]
+    assert second["session_id"] != first["session_id"]
+
+
+def test_fallback_text_is_not_cached(monkeypatch):
+    import importlib
+    app_module = importlib.import_module("src.api.app")
+
+    def bedrock_down(*a, **k):
+        raise RuntimeError("sem cota")
+    monkeypatch.setattr(app_module.bedrock_service, "invoke", bedrock_down)
+    calls = _count_graph_runs(monkeypatch)
+    client.post("/api/audit", json={"code_or_prompt": CACHE_TF})
+    again = client.post("/api/audit", json={"code_or_prompt": CACHE_TF}).json()
+    assert len(calls) == 2
+    assert again["cached"] is False
