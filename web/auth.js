@@ -16,7 +16,9 @@ const Auth = (() => {
     return sessionStorage.getItem(TOKEN_KEY);
   }
 
-  async function login() {
+  // endpoint: '/oauth2/authorize' para entrar, '/logout' para sair. No /logout usamos redirect_uri
+  // (ja cadastrada como callback) em vez de logout_uri, que exigiria a URL nas "sign-out URLs" do app client.
+  async function goToCognito(endpoint) {
     const verifier = b64url(crypto.getRandomValues(new Uint8Array(32)));
     sessionStorage.setItem(VERIFIER_KEY, verifier);
     const challenge = b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)));
@@ -24,13 +26,14 @@ const Auth = (() => {
       response_type: 'code', client_id: cfg.clientId, redirect_uri: redirectUri,
       scope: 'openid email', code_challenge_method: 'S256', code_challenge: challenge,
     });
-    window.location.assign(`${cfg.domain}/oauth2/authorize?${params}`);
+    window.location.assign(`${cfg.domain}${endpoint}?${params}`);
   }
+
+  const login = () => goToCognito('/oauth2/authorize');
 
   function logout() {
     sessionStorage.removeItem(TOKEN_KEY);
-    const params = new URLSearchParams({ client_id: cfg.clientId, logout_uri: redirectUri });
-    window.location.assign(`${cfg.domain}/logout?${params}`);
+    goToCognito('/logout');
   }
 
   // Troca o ?code= do retorno do Hosted UI pelo access token

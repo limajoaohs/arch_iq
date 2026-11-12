@@ -5,25 +5,22 @@ O contexto nao vem do navegador: o servidor refaz a analise estatica do Terrafor
 do relatorio do cliente. Se o Bedrock falhar, a resposta sai do proprio catalogo.
 
 Cota do Bedrock: pergunta e historico tem tamanho limitado, a resposta e curta e
-perguntas repetidas sobre o mesmo Terraform saem de um cache em memoria.
+perguntas repetidas sobre o mesmo Terraform saem do cache (memoria + DynamoDB, como as auditorias).
 """
 
 from __future__ import annotations
 
-import hashlib
 import re
-import threading
 import unicodedata
-from collections import OrderedDict
 from typing import Any, Dict, List, Optional
 
 from src.agents.client_report import build_client_report
+from src.aws.cache import ResultCache
 from src.terraform.static_analyzer import analyze_terraform
 
 MAX_QUESTION_CHARS = 500
 MAX_HISTORY_TURNS = 6
 MAX_HISTORY_CHARS = 1500
-CACHE_SIZE = 512
 
 SYSTEM_PROMPT = (
     "Voce e o assistente do ArchIQ e conversa com uma pessoa que pode nao entender nada de "
@@ -46,10 +43,9 @@ def _words(text: str) -> set:
 
 
 class QuestionAgent:
-    def __init__(self, bedrock: Any) -> None:
+    def __init__(self, bedrock: Any, cache: Optional[ResultCache] = None) -> None:
         self.bedrock = bedrock
-        self._cache: "OrderedDict[str, Dict[str, str]]" = OrderedDict()
-        self._lock = threading.Lock()
+        self.cache = cache or ResultCache(table_name="")
 
     # ------------------------------------------------------------------
     def answer(self, code: str, question: str, history: Optional[List[Dict[str, str]]] = None) -> Dict[str, str]:
@@ -60,11 +56,10 @@ class QuestionAgent:
         # So cacheia perguntas sem historico: com historico a resposta depende da conversa
         key = None
         if not history:
-            key = hashlib.sha256(f"{code}\0{_normalize(question)}".encode()).hexdigest()
-            with self._lock:
-                if key in self._cache:
-                    self._cache.move_to_end(key)
-                    return dict(self._cache[key])
+            key = f"ask\0{code.strip()}\0{_normalize(question)}"
+            hit = self.cache.get(key)
+            if hit:
+                return hit
 
         try:
             text = self.bedrock.invoke(
@@ -81,10 +76,7 @@ class QuestionAgent:
             return {"answer": self._fallback(context, question), "source": "catalog"}
 
         if key:
-            with self._lock:
-                self._cache[key] = result
-                if len(self._cache) > CACHE_SIZE:
-                    self._cache.popitem(last=False)
+            self.cache.put(key, result)
         return dict(result)
 
     # ------------------------------------------------------------------

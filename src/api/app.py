@@ -404,7 +404,7 @@ cloudwatch_service = CloudWatchService()
 textract_service = TextractService()
 history_service = HistoryService()
 result_cache = ResultCache()
-question_agent = QuestionAgent(bedrock_service)
+question_agent = QuestionAgent(bedrock_service, result_cache)
 
 data_path = os.path.join(os.path.dirname(__file__), "..", "..", "data", "well_architected.json")
 vector_store.seed_data(os.path.abspath(data_path))

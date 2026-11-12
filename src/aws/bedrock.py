@@ -1,8 +1,10 @@
 import os
 import threading
+import time
 from typing import Optional, Dict, Any
 import boto3
 from botocore.config import Config
+from botocore.exceptions import ClientError
 from src.config import settings
 
 # Fila de graca, dentro do processo: no maximo N chamadas ao Bedrock ao mesmo tempo. Num pico,
@@ -10,6 +12,10 @@ from src.config import settings
 BEDROCK_MAX_CONCURRENT = int(os.environ.get("BEDROCK_MAX_CONCURRENT", "4"))
 BEDROCK_QUEUE_TIMEOUT = float(os.environ.get("BEDROCK_QUEUE_TIMEOUT", "25"))
 _slots = threading.BoundedSemaphore(BEDROCK_MAX_CONCURRENT)
+# Disjuntor: com a cota diaria de tokens esgotada, insistir so atrasa o usuario (4 tentativas
+# com espera). Depois desse erro, as chamadas vao direto para o texto de reserva por um tempo.
+BEDROCK_QUOTA_PAUSE = float(os.environ.get("BEDROCK_QUOTA_PAUSE", "900"))
+_paused_until = 0.0
 
 
 class BedrockBusy(RuntimeError):
@@ -57,10 +63,17 @@ class BedrockService:
             }
 
         # Erros da AWS (throttling, credenciais, modelo) sobem para o chamador decidir o fallback
+        global _paused_until
+        if time.time() < _paused_until:
+            raise BedrockBusy("Bedrock pausado: cota diaria de tokens esgotada")
         if not _slots.acquire(timeout=BEDROCK_QUEUE_TIMEOUT):
             raise BedrockBusy("Bedrock ocupado: fila cheia")
         try:
             response = self.client.converse(**converse_kwargs)
+        except ClientError as e:
+            if "per day" in str(e).lower():
+                _paused_until = time.time() + BEDROCK_QUOTA_PAUSE
+            raise
         finally:
             _slots.release()
         return response["output"]["message"]["content"][0]["text"]

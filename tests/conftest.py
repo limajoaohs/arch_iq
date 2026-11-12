@@ -7,4 +7,6 @@ def fresh_result_cache(monkeypatch):
     import importlib
     app_module = importlib.import_module("src.api.app")
     from src.aws.cache import ResultCache
-    monkeypatch.setattr(app_module, "result_cache", ResultCache(table_name=""))
+    cache = ResultCache(table_name="")
+    monkeypatch.setattr(app_module, "result_cache", cache)
+    monkeypatch.setattr(app_module.question_agent, "cache", cache)
