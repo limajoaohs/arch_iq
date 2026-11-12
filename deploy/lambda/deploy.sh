@@ -7,6 +7,7 @@
 # Le os nomes dos recursos do .env (tabela, bucket, topico, Cognito); as chaves do .env nao sao usadas:
 # no Lambda as permissoes vem da role criada aqui.
 set -euo pipefail
+export MSYS_NO_PATHCONV=1  # Git Bash no Windows: nao converter /aws/lambda/... em caminho local
 cd "$(dirname "$0")/../.."
 
 FN="${FN:-arch-iq-api}"
@@ -76,6 +77,9 @@ if ! $AWS lambda get-function-url-config --function-name "$FN" >/dev/null 2>&1; 
   $AWS lambda create-function-url-config --function-name "$FN" --auth-type NONE >/dev/null
   $AWS lambda add-permission --function-name "$FN" --statement-id public-url \
     --action lambda:InvokeFunctionUrl --principal '*' --function-url-auth-type NONE >/dev/null
+  # Desde out/2025 a URL publica tambem exige InvokeFunction (so pela URL, pela condicao abaixo)
+  $AWS lambda add-permission --function-name "$FN" --statement-id public-url-invoke \
+    --action lambda:InvokeFunction --principal '*' --invoked-via-function-url >/dev/null
 fi
 URL="$($AWS lambda get-function-url-config --function-name "$FN" --query FunctionUrl --output text)"
 echo
