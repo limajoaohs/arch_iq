@@ -4,9 +4,9 @@ ArchIQ e um assistente para analise de arquitetura em nuvem e otimizacao de cust
 
 A proposta e demonstrar na pratica a integracao entre modelos de linguagem (Amazon Bedrock), orquestracao com grafos de estado (LangGraph), busca vetorial com RAG (ChromaDB) e recursos do ecossistema AWS.
 
-**Demo:** https://limajoaohs.github.io/arch_iq/ (login com cadastro aberto) · **API:** https://4qofk6fdysd3b7nc4jbsjukf4u0ngpjq.lambda-url.us-east-1.on.aws/docs (AWS Lambda; reserva no Render: https://arch-iq.onrender.com/docs)
+**Site:** https://4qofk6fdysd3b7nc4jbsjukf4u0ngpjq.lambda-url.us-east-1.on.aws/ (login com cadastro aberto) · **API:** https://4qofk6fdysd3b7nc4jbsjukf4u0ngpjq.lambda-url.us-east-1.on.aws/docs (site e API no mesmo AWS Lambda)
 
-**Repositorio:** https://git.virtus.ufcg.edu.br/joao.lima/archiq (VIRTUS, principal) · espelho em https://github.com/limajoaohs/arch_iq (publica o site no GitHub Pages)
+**Repositorio:** https://git.virtus.ufcg.edu.br/joao.lima/archiq (VIRTUS, principal) · espelho em https://github.com/limajoaohs/arch_iq
 
 ![Arquitetura do ArchIQ](docs/architecture.svg)
 

@@ -10,8 +10,9 @@
 //                          'https://seu-app.railway.app'
 //                          'https://seu-app.fly.dev'
 window.API_CONFIG = {
-  // API no AWS Lambda (deploy/lambda); para voltar ao Render, use a URL do comentario
-  baseUrl: 'https://4qofk6fdysd3b7nc4jbsjukf4u0ngpjq.lambda-url.us-east-1.on.aws',  // Render (reserva): https://arch-iq.onrender.com
+  // O site e servido pelo proprio Lambda da API (mesmo endereco), entao a URL base fica vazia.
+  // Render (reserva): https://arch-iq.onrender.com
+  baseUrl: '',
   auditEndpoint: '/api/audit',
   askEndpoint: '/api/ask',
   healthEndpoint: '/health',
