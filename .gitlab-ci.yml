@@ -1,0 +1,12 @@
+# Publica o site (pasta web/, HTML puro sem build) no GitLab Pages do git.virtus a cada push no main.
+pages:
+  stage: deploy
+  image: alpine:3.20
+  script:
+    - mkdir -p public
+    - cp -r web/. public/
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
